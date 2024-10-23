@@ -1,0 +1,90 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif; /* Apply your desired font */
+}
+
+/* Make sure all elements inherit the global font */
+body * {
+    font-family: inherit; /* Ensures all elements inherit the body font */
+}
+
+/* Alternatively, to force it */
+body * {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+  
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+}
+
+
+
+.featured-properties {
+    padding: 50px 0;
+    text-align: center;
+}
+
+.property-grid {
+    display: flex;
+    justify-content: space-around;
+}
+
+.property {
+    border: 1px solid #ddd;
+    padding: 20px;
+    width: 30%;
+}
+
+.services {
+    background-color: #f9f9f9;
+    padding: 50px 0;
+    text-align: center;
+}
+
+.service-grid {
+    display: flex;
+    justify-content: space-around;
+}
+
+.ai-chat {
+    background-color: #ffe4e1;
+    padding: 50px 0;
+    text-align: center;
+}
+
+.ai-chat button {
+    padding: 10px 20px;
+    background-color: #ff6347;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.real-estate-trends {
+    padding: 50px 0;
+    text-align: center;
+}
+
+.trend-grid {
+    display: flex;
+    justify-content: space-around;
+}
+
+.chart-placeholder {
+    width: 100px;
+    height: 100px;
+    background-color: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+

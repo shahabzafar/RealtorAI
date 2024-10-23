@@ -1,0 +1,92 @@
+.performance-overview {
+  padding: 2rem;
+  padding-left: 13rem;
+  padding-right: 13rem;
+  background-color: white;
+  color: black;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.performance-overview h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.performance-overview p {
+  font-size: 1rem;
+  color: #6c6c6c;
+  margin-bottom: 2rem;
+}
+
+.view-details {
+  padding: 0.8rem 1.5rem;
+  background-color: black;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.view-details:hover {
+  background-color: #333;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.stat-box {
+  flex: 1;
+  padding: 1.5rem;
+  margin: 0 1rem;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-title {
+  display: block;
+  font-size: 1rem;
+  color: #6c6c6c;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: black;
+}
+
+.sales-trends {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.sales-trends h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.sales-chart {
+  width: 100%;
+  height: 200px;
+  background-color: #eaeaea;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #6c6c6c;
+  font-size: 1rem;
+  font-family: 'Poppins', sans-serif;
+}

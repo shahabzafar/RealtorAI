@@ -1,0 +1,189 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+.footer {
+    background-color: #000;
+    color: white;
+    padding: 50px 0;
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    padding-left: 65px;
+}
+
+/* Left section - AI Realtor logo and links */
+.footer-section {
+    flex: 1;
+    margin-right: 20px;
+    min-width: 200px;
+}
+
+.footer-logo h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+}
+
+.footer-links ul {
+    list-style: none;
+    padding-left: 100px;
+    margin-top: 10px;
+}
+
+.footer-links ul li {
+    margin-bottom: 30px;
+}
+
+.footer-links ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.1rem;
+}
+
+.footer-links ul li a:hover {
+    color: #7f58ff;
+}
+
+/* Right section - Contact Us */
+.footer-contact {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    margin-left: 250px;    
+    max-width: 750px; /* Increase the max width */
+}
+
+.footer-contact h4 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    margin-left: 30px;
+
+}
+
+/* Contact form container */
+.contact-form {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px; /* Add spacing between the left and right sides */
+}
+
+/* Left side (Email, Phone, and Contact Button) */
+.contact-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 40%; /* Occupy 45% of the space */
+}
+
+.contact-left input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    margin-left: 30px;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid white;
+    color: white;
+    font-size: 1rem;
+}
+
+.contact-left input::placeholder {
+    color: #ccc;
+}
+
+.contact-left button {
+    padding: 12px;
+    background-color: #333;
+    width: 222%;
+    margin-left: 30px;
+    color: white;
+    border: 1px solid white;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin-top: 20px;
+}
+
+.contact-left button:hover {
+    background-color: white;
+    color: black;
+}
+
+/* Right side (Message box) */
+.contact-right {
+    width: 60%; /* Take up the rest of the space */
+    margin-right: -50px;
+}
+
+.contact-right textarea {
+    width: 75%;
+    height: 57%; /* Ensure it fills the height of the left column */
+    padding: 13px;
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    font-size: 1rem;
+    resize: none;
+}
+
+.contact-right textarea::placeholder {
+    color: #ccc;
+}
+
+/* Footer bottom */
+.footer-bottom {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #444;
+}
+
+.footer-bottom p {
+    font-size: 1.05rem;
+    margin-top: 25px;
+}
+
+@media (max-width: 768px) {
+    .footer-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .footer-section {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    .footer-contact {
+        flex-direction: column;
+        padding-left: 0;
+        max-width: 100%;
+    }
+
+    .contact-form {
+        flex-direction: column;
+    }
+
+    .contact-left,
+    .contact-right {
+        width: 100%; /* Full width for mobile */
+    }
+
+    .contact-right textarea {
+        height: 140px; /* Adjust height for mobile */
+    }
+}

@@ -1,0 +1,61 @@
+/* Real Estate Trends Section - Clean and Informative */
+.real-estate-trends {
+    background-color: #f9fbfd; /* Matching soft background */
+    color: #333;
+    padding: 60px 0;
+    text-align: center;
+}
+
+.real-estate-trends .container {
+    width: 85%;
+    margin: 0 auto;
+}
+
+.real-estate-trends h3 {
+    font-size: 2em;
+    color: #ff6347; /* Consistent orange for headings */
+    margin-bottom: 30px;
+}
+
+.trend-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 20px;
+    flex-wrap: wrap; /* Wrap on smaller screens */
+}
+
+.trend, .market-performance {
+    background: #ffffff; /* White background for contrast */
+    padding: 20px;
+    border-radius: 15px; /* Soft curves */
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+    width: 22%; /* Fits 4 trends per row */
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.trend:hover, .market-performance:hover {
+    transform: translateY(-5px); /* Slight lift on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.trend h4, .market-performance h4 {
+    font-size: 1.5em;
+    color: #4a90e2; /* Consistent blue color for subheadings */
+    margin-bottom: 10px;
+}
+
+.trend p {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+.market-performance .chart-placeholder {
+    background-color: #e9e9e9;
+    border-radius: 10px;
+    padding: 50px;
+    text-align: center;
+    font-size: 1.2em;
+    color: #777;
+}

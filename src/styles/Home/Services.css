@@ -1,0 +1,52 @@
+/* Services Section - Clean and Modern */
+.services {
+    background-color: #f9fbfd; /* Soft background to match Featured Properties */
+    color: #333;
+    padding: 60px 0;
+    text-align: center;
+}
+
+.services .container {
+    width: 85%;
+    margin: 0 auto;
+}
+
+.services h3 {
+    font-size: 2em;
+    color: #ff6347; /* Consistent orange shade for heading */
+    margin-bottom: 30px;
+}
+
+.service-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 20px;
+    flex-wrap: wrap; /* Ensures flexibility on smaller screens */
+}
+
+.service {
+    background: #ffffff; /* White background for contrast */
+    padding: 20px;
+    border-radius: 15px; /* Slightly curved edges for consistency */
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    width: 45%; /* Adjust width to fit two services next to each other */
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.service:hover {
+    transform: translateY(-5px); /* Slight lift on hover for interactivity */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.service h4 {
+    font-size: 1.5em;
+    color: #4a90e2; /* Consistent blue shade for subheadings */
+    margin-bottom: 10px;
+}
+
+.service p {
+    font-size: 1.1em;
+    color: #555; /* Softer text color */
+    margin-bottom: 8px;
+}

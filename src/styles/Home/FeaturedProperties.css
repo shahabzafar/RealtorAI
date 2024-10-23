@@ -1,0 +1,57 @@
+/* Featured Properties - Playful Bubbly Layout */
+.featured-properties {
+    background-color: #f9fbfd; /* Soft, light background to blend well */
+    color: #333;
+    padding: 60px 0;
+    text-align: center;
+}
+
+.containerProp {
+    width: 85%;
+    margin: 0 auto;
+}
+
+.containerProp h3 {
+    font-size: 2em;
+    color: #ff6347;
+    margin-bottom: 30px;
+}
+
+.property-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 20px;
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+}
+
+.property {
+    background: #ffffff; /* White background for contrast */
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    width: 30%; /* Adjust width to fit 3 properties next to each other */
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.property:hover {
+    transform: translateY(-5px); /* Slight lift on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.property h4 {
+    font-size: 1.5em;
+    color: #4a90e2;
+    margin-bottom: 10px;
+}
+
+.property p {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+.property p:last-of-type {
+    font-weight: bold;
+    color: #ff6347; /* Highlighted price */
+}

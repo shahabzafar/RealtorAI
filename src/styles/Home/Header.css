@@ -1,0 +1,47 @@
+/* Remove all default margins and padding from body */
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
+/* Adjust header to remove all gaps */
+.containerHeader {
+    width: 100%;
+    margin: 0 auto;
+    background-color: black; /* Pitch black background */
+    padding: 0; /* No padding for full height */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box; /* Ensure padding/margin doesn't affect size */
+    height: 60px; /* Set height for uniform look */
+}
+
+h1 {
+    color: white;
+    margin-left: 85px; /* Slight margin for better visual alignment */
+    font-size: 24px;
+    font-family: Georgia, serif;
+}
+
+nav {
+    margin-right:85px; /* Slight margin for spacing */
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px; /* Adjust gap for balanced spacing */
+    margin: 0;
+    padding: 0;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+}
+
+nav ul li a:hover {
+    text-decoration: underline;
+}
