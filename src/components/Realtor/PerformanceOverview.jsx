@@ -1,5 +1,5 @@
 import React from 'react';
-import '../../styles/Sell/PerformanceOverview.css';
+import '../../styles/Realtor/PerformanceOverview.css';
 
 const PerformanceOverview = () => {
   return (

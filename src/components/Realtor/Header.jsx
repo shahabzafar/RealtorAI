@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/Sell/Header.css';
+import '../../styles/Realtor/Header.css';
 
 const Header = () => {
   return (
@@ -8,7 +8,7 @@ const Header = () => {
       <div className="containerHeader">
         <div className="user-section">
           <div className="user-avatar"></div>
-          <h2>Seller Dashboard</h2>
+          <h2>Realtor's Dashboard</h2>
         </div>
         <nav>
           <ul className="nav-links">
@@ -21,7 +21,7 @@ const Header = () => {
           <input
             type="text"
             className="search-input"
-            placeholder="Search in site..."
+            placeholder="Search in site"
           />
         </div>
       </div>

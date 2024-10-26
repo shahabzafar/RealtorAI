@@ -12,7 +12,7 @@ body {
 .footer {
     background-color: #000;
     color: white;
-    padding: 50px 0;
+    padding: 10px 0; /* Reduce padding to slim the footer vertically */
 }
 
 .footer-container {
@@ -22,7 +22,9 @@ body {
     width: 100%;
     margin: 0 auto;
     position: relative;
-    padding-left: 65px;
+    padding-left: 50px; /* Keep horizontal padding same */
+    padding-top: 5px; /* Further reduce vertical padding */
+    padding-bottom: 5px;
 }
 
 /* Left section - AI Realtor logo and links */
@@ -33,24 +35,24 @@ body {
 }
 
 .footer-logo h2 {
-    font-size: 2rem;
-    margin-bottom: 30px;
+    font-size: 1.8rem;
+    margin-bottom: 15px; /* Reduce bottom margin */
 }
 
 .footer-links ul {
     list-style: none;
-    padding-left: 100px;
-    margin-top: 10px;
+    padding-left: 80px; /* Keep horizontal padding same */
+    margin-top: 5px; /* Reduce margin */
 }
 
 .footer-links ul li {
-    margin-bottom: 30px;
+    margin-bottom: 15px; /* Keep spacing but reduced vertically */
 }
 
 .footer-links ul li a {
     color: #fff;
     text-decoration: none;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .footer-links ul li a:hover {
@@ -63,22 +65,20 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-left: 250px;    
-    max-width: 750px; /* Increase the max width */
+    margin-left: 200px;
+    max-width: 750px;
 }
 
 .footer-contact h4 {
-    font-size: 2rem;
-    margin-bottom: 20px;
+    font-size: 1.8rem;
+    margin-bottom: 10px; /* Further reduce bottom margin */
     margin-left: 30px;
-
 }
 
 /* Contact form container */
 .contact-form {
     display: flex;
     justify-content: space-between;
-    gap: 20px; /* Add spacing between the left and right sides */
 }
 
 /* Left side (Email, Phone, and Contact Button) */
@@ -86,13 +86,13 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    width: 40%; /* Occupy 45% of the space */
+    width: 40%;
 }
 
 .contact-left input {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
+    padding: 10px; /* Reduce padding for a more compact look */
+    margin-bottom: 10px; /* Reduce bottom margin */
     margin-left: 30px;
     background-color: transparent;
     border: none;
@@ -106,15 +106,15 @@ body {
 }
 
 .contact-left button {
-    padding: 12px;
+    padding: 10px; /* Slim the button further */
     background-color: #333;
-    width: 222%;
+    width: 200%;
     margin-left: 30px;
     color: white;
     border: 1px solid white;
     cursor: pointer;
-    font-size: 1.1rem;
-    margin-top: 20px;
+    font-size: 1rem;
+    margin-top: 10px;
 }
 
 .contact-left button:hover {
@@ -124,14 +124,15 @@ body {
 
 /* Right side (Message box) */
 .contact-right {
-    width: 60%; /* Take up the rest of the space */
-    margin-right: -50px;
+    width: 60%;
 }
 
 .contact-right textarea {
-    width: 75%;
-    height: 57%; /* Ensure it fills the height of the left column */
-    padding: 13px;
+    width: 62%;
+    height: 55%; /* Keep height consistent */
+    padding: 10px;
+    margin-top: 9.5px;
+    margin-left: 47.5px; 
     background-color: transparent;
     border: 1px solid white;
     color: white;
@@ -146,14 +147,14 @@ body {
 /* Footer bottom */
 .footer-bottom {
     text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
+    margin-top: 15px; /* Reduce margin */
+    padding-top: 5px; /* Slim the footer-bottom section */
     border-top: 1px solid #444;
 }
 
 .footer-bottom p {
-    font-size: 1.05rem;
-    margin-top: 25px;
+    font-size: 1rem;
+    margin-top: 10px; /* Reduce top margin */
 }
 
 @media (max-width: 768px) {
@@ -165,7 +166,7 @@ body {
 
     .footer-section {
         margin-right: 0;
-        margin-bottom: 20px;
+        margin-bottom: 10px; /* Reduce bottom margin */
     }
 
     .footer-contact {
@@ -180,10 +181,10 @@ body {
 
     .contact-left,
     .contact-right {
-        width: 100%; /* Full width for mobile */
+        width: 100%;
     }
 
     .contact-right textarea {
-        height: 140px; /* Adjust height for mobile */
+        height: 140px;
     }
 }
