@@ -9,6 +9,8 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
+let sellerData = {};
+
 app.post('/generate-link', async (req, res) => {
     try {
         const zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL;
@@ -19,10 +21,10 @@ app.post('/generate-link', async (req, res) => {
         });
 
         // Assuming Zapier sends back the link in zapierResponse.data.link
-        // const generatedLink = req.body.link;
-        // const generatedLink = zapierResponse.data.link;
-        
-        const generatedLink = "TEMP";
+        //const generatedLink = req.body.link;
+        const generatedLink = zapierResponse.data.link;
+
+        //const generatedLink = "TEMP";
         if (generatedLink) {
             console.log("Received link from Zapier:", generatedLink);
             res.json({ link: generatedLink });
@@ -35,6 +37,29 @@ app.post('/generate-link', async (req, res) => {
         res.status(500).send('Error generating link');
     }
 });
+
+// POST endpoint to receive data from Zapier
+// For now the data is printed on the console
+app.post("/setSellerData", (req, res) => {
+
+    const { LeadName, Contact, LeadEmail, AskingPrice } = req.body;
+    console.log("Data received from Zapier:", { LeadName, Contact, LeadEmail, AskingPrice });
+
+
+    sellerData = { LeadName, Contact, LeadEmail, AskingPrice }; // Store the data from Zapier tables
+
+    res.json({ message: "Data received successfully!" });
+});
+
+
+// Send data to the frontend (GeneratedLeads.jsx)
+app.get('/getSellerData', (req, res) => {
+    res.json(sellerData);
+});
+
+
+
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
