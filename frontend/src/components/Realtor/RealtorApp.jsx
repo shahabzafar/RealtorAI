@@ -5,6 +5,7 @@ import PerformanceOverview from './PerformanceOverview';
 import GeneratedLeads from './GeneratedLeads';
 import RealtorProfileHeader from './RealtorProfileHeader';
 import Footer from '../Home/Footer';
+import Carousel from './Carousel';
 
 function RealtorApp() {
   return (
@@ -13,6 +14,7 @@ function RealtorApp() {
       <RealtorProfileHeader />
       <PerformanceOverview />
       <GeneratedLeads />
+      <Carousel />
       <Footer />
     </div>
   );
