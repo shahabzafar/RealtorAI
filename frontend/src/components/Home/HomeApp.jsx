@@ -13,7 +13,7 @@ const HomeApp = () => {
 
   useEffect(() => {
     // Fetch authenticated user info on component mount
-    fetch('http://localhost:5000/auth/user', { credentials: 'include' })
+    fetch('https://realtortempaibackend.onrender.com/auth/user', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
@@ -24,11 +24,12 @@ const HomeApp = () => {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = 'http://localhost:5000/auth/google';
+    window.location.href = 'https://realtortempaibackend.onrender.com/auth/google';
   };
+  
 
   const handleLogout = () => {
-    fetch('http://localhost:5000/auth/logout', { credentials: 'include' })
+    fetch('https://realtortempaibackend.onrender.com/auth/logout', { credentials: 'include' })
       .then(() => setUser(null))
       .catch((error) => console.error("Error logging out:", error));
   };

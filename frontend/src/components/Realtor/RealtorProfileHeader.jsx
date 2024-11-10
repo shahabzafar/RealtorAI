@@ -12,13 +12,12 @@ const RealtorProfileHeader = () => {
       setGeneratedLink('');
       setLinkGenerated(false);
 
-      const response = await fetch('http://localhost:5000/generate-link', {
+      const response = await fetch('https://realtortempaibackend.onrender.com/generate-link', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ realtorId: "realtor123" }) // Adjust realtorId as needed
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ realtorId: "realtor123" })
       });
+      
 
       const data = await response.json();
       console.log("Response from backend:", data);
