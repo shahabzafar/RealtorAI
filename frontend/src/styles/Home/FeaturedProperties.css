@@ -7,51 +7,162 @@
 }
 
 .containerProp {
-    width: 85%;
+    width: 98%;
     margin: 0 auto;
+    padding: 0 20px;
 }
 
 .containerProp h3 {
-    font-size: 2em;
+    font-size: 2.3em;
     color: #ff6347;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
 }
 
 .property-grid {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
     align-items: stretch;
     gap: 20px;
-    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    flex-wrap: wrap;
+    padding: 20px;
 }
 
 .property {
-    background: #ffffff; /* White background for contrast */
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-    width: 30%; /* Adjust width to fit 3 properties next to each other */
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    width: 585px;
+    height: 530px; /* Increased height */
+    overflow: hidden;
     transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
 }
 
 .property:hover {
-    transform: translateY(-5px); /* Slight lift on hover */
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.property h4 {
-    font-size: 1.5em;
-    color: #4a90e2;
-    margin-bottom: 10px;
+.property-image-container {
+    position: relative;
+    width: 100%;
+    height: 400px; /* Fixed height for images */
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
 }
 
-.property p {
-    font-size: 1.1em;
-    color: #555;
-    margin-bottom: 8px;
+.property-image {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
 }
 
-.property p:last-of-type {
+.property-image.active {
+    opacity: 1;
+}
+
+.property-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.property-details {
+    padding: 20px;
+    text-align: center; /* Center the text */
+    background-color: #ffffff;
+    margin-top: auto;
+}
+
+.property-details p {
+    font-size: 1.2em;
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.property-details .price {
+    font-size: 1.4em;
+    color: #ff6347;
     font-weight: bold;
-    color: #ff6347; /* Highlighted price */
+}
+
+/* Responsive design */
+@media (max-width: 2000px) {
+    .property {
+        width: 520px;
+        height: 480px; /* Adjust height for smaller screens */
+    }
+    .property-image-container {
+        height: 360px; /* Adjust image height */
+    }
+}
+
+@media (max-width: 1800px) {
+    .property {
+        width: 475px;
+        height: 450px; /* Adjust height for smaller screens */
+    }
+    .property-image-container {
+        height: 330px; /* Adjust image height */
+    }
+}
+
+@media (max-width: 1600px) {
+    .property {
+        width: 430px;
+        height: 420px; /* Adjust height for smaller screens */
+    }
+    .property-image-container {
+        height: 300px; /* Adjust image height */
+    }
+}
+
+@media (max-width: 1400px) {
+    .property {
+        width: 385px;
+        height: 400px; /* Adjust height for smaller screens */
+    }
+    .property-image-container {
+        height: 280px; /* Adjust image height */
+    }
+}
+
+@media (max-width: 768px) {
+    .property {
+        width: 100%;
+        max-width: 585px;
+        height: 520px; /* Ensure proper scaling for smaller screens */
+    }
+    .property-image-container {
+        height: 400px;
+    }
+}
+
+/* Optional: Add indicators */
+.carousel-indicators {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+}
+
+.indicator.active {
+    background: white;
 }

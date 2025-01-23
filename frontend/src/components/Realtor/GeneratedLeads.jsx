@@ -12,14 +12,21 @@ const GeneratedLeads = () => {
 
   const getDataFromZap = async () => {
     try {
-      const response = await fetch("/getSellerData");
-
+      const response = await fetch("https://realtoriqbackend.onrender.com/getSellerData", {
+        credentials: 'include',
+      });
+  
       if (!response.ok) {
         const errorText = await response.text();
+        if (response.status === 401) {
+          console.error("User not authenticated. Redirect to login.");
+          // Redirect or notify the user
+        }
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
+  
       const data = await response.json();
-
+  
       setSellerData({
         LeadName: data.LeadName || "",
         Contact: data.Contact || "",
@@ -30,6 +37,7 @@ const GeneratedLeads = () => {
       console.error("Error fetching data: ", error);
     }
   };
+  
 
   useEffect(() => {
     getDataFromZap(); 

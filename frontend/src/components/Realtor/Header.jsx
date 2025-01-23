@@ -1,30 +1,81 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/Realtor/Header.css';
+import '../../styles/Home/Header.css';
 
-const Header = () => {
+const Header = ({ user, onLogout }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <header>
-      <div className="containerHeader">
-        <div className="user-section">
-          <div className="user-avatar"></div>
-          <h2>Realtor's Dashboard</h2>
-        </div>
-        <nav>
-          <ul className="nav-links">
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/properties">Properties</Link></li>
-            <li><Link to="/performance">Performance</Link></li>
-          </ul>
-        </nav>
-        <div className="search-section">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search in site"
-          />
-        </div>
-      </div>
+    <header className="containerHeader">
+      <h1>AI Realtor</h1>
+      <nav>
+        <ul>
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          <li>
+            <Link to="/buy">Buy</Link>
+          </li>
+          <li>
+            <Link to="/realtor">Realtor</Link>
+          </li>
+          {user ? (
+            // If user is logged in
+            <>
+              <li className="user-menu" ref={dropdownRef}>
+                <button
+                  className="user-menu-button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                >
+                  {user.firstName && user.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.displayName || 'Welcome User'}{' '}
+                  ▼
+                </button>
+                {isDropdownOpen && (
+                  <div className="user-dropdown">
+                    <button
+                      onClick={() => {
+                        onLogout();
+                        setIsDropdownOpen(false);
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </li>
+            </>
+          ) : (
+            // If user is not logged in
+            <>
+              <li>
+                <Link to="/signin" className="sign-in-link">
+                  Sign In
+                </Link>
+              </li>
+              <li>
+                <Link to="/signup" className="sign-up-link">
+                  Sign Up
+                </Link>
+              </li>
+            </>
+          )}
+        </ul>
+      </nav>
     </header>
   );
 };

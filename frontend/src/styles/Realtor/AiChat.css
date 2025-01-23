@@ -1,0 +1,79 @@
+/* AI Chat Section */
+.ai-chat {
+  background-color: #000;
+  padding: 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 15px; /* Rounded corners */
+}
+
+.ai-chat .container {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  border: none;
+}
+
+.ai-chat h3 {
+  font-size: 2.2rem;
+  color: #fff;
+  margin-bottom: 25px;
+  font-family: 'Poppins', sans-serif;
+  z-index: 2;
+  position: relative;
+}
+
+.ai-chat button {
+  padding: 12px 30px;
+  background-color: #ff6347; /* Orange button */
+  color: #fff;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 15px; /* Rounded corners */
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  z-index: 2;
+  position: relative;
+}
+
+.ai-chat button:hover {
+  background-color: #e0533b;
+  transform: scale(1.02);
+}
+
+.ai-chat button:active {
+  transform: scale(0.98);
+}
+
+/* Chatbox Styles */
+#myLandbot {
+  margin: 20px auto; /* Adds padding around the chatbox */
+  border-radius: 15px; /* Rounded corners for chatbox */
+  overflow: hidden;
+  width: 100%;
+  max-width: 800px; /* Centers and constrains chatbox width */
+  height: 500px; /* Consistent height */
+}
+
+/* Padding adjustments for container */
+.ai-chat .container {
+  padding-bottom: 60px; /* Adds padding below the chatbox */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .ai-chat h3 {
+      font-size: 1.8rem;
+  }
+
+  .ai-chat button {
+      font-size: 1rem;
+      padding: 10px 25px;
+  }
+
+  #myLandbot {
+      height: 400px; /* Reduced height for smaller screens */
+  }
+}

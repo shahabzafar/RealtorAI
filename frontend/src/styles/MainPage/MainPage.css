@@ -1,0 +1,62 @@
+/*  */
+.main-page-container.dark-mode {
+    background-color: #121212;
+    color: #fff;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+  
+  .main-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .header-actions button {
+    margin-left: 1rem;
+  }
+  
+  .form-link-section {
+    margin-bottom: 2rem;
+  }
+  
+  .form-link-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .clients-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  
+  .client-card {
+    background-color: #1d1d1d;
+    border: 1px solid #333;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .client-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .client-detail {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background-color: #2a2a2a;
+    padding: 1rem;
+    border: 1px solid #444;
+    border-radius: 8px;
+    max-width: 300px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
