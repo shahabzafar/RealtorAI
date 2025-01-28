@@ -1,0 +1,83 @@
+/* Header container styling */
+.containerHeader {
+  width: 100%;
+  background-color: black;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  height: 70px;
+  padding: 0 40px;
+}
+
+.containerHeader h2{
+  color: aliceblue;
+  margin-top: auto;
+}
+
+/* User section styling */
+.user-section {
+  display: flex;
+  align-items: center;
+}
+
+
+/* Navigation menu styling */
+nav {
+  margin-left: auto; /* Pushes the navigation links towards the right */
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 30px;
+}
+
+.nav-links li a {
+  color: white;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.nav-links li a:hover {
+  text-decoration: underline;
+}
+
+/* Search section styling */
+.search-section {
+  display: flex;
+  align-items: center;
+  margin-left: -50px;
+}
+
+.search-input {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px; /* Ensures the search box is wide enough */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .containerHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 20px;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .search-section {
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+}

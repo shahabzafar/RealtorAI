@@ -1,0 +1,114 @@
+/* Remove all default margins and padding from body */
+body, html {
+    margin: 0;
+    padding: 0;
+}
+
+/* Adjust header to remove all gaps */
+.containerHeader {
+    width: 100%;
+    background-color: black;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+h1 {
+    color: white;
+    margin-left: 85px;
+    font-size: 24px;
+    font-family: Georgia, serif;
+}
+
+nav {
+    margin-right: 85px;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+}
+
+nav ul li a:hover {
+    text-decoration: underline;
+}
+
+.user-menu {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.user-menu-button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+}
+
+.user-menu-button:hover {
+    opacity: 0.8;
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.user-dropdown button {
+    width: 100%;
+    padding: 12px 16px;
+    text-align: left;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #333;
+    font-size: 16px;
+}
+
+.user-dropdown button:hover {
+    background-color: #f5f5f5;
+}
+
+.sign-in-link {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+}
+
+.sign-in-link:hover {
+    opacity: 0.8;
+}
+
+nav ul li.user-menu {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
