@@ -1,0 +1,64 @@
+/*  */
+.main-page-container {
+    background-color: var(--background-light);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 1rem;
+  }
+  
+  .main-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .header-actions button {
+    margin-left: 1rem;
+  }
+  
+  .form-link-section {
+    margin-bottom: 2rem;
+  }
+  
+  .form-link-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .clients-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  
+  .client-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  
+  .client-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .client-detail {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background-color: var(--card-bg);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-width: 300px;
+    max-height: 70vh;
+    overflow-y: auto;
+    color: var(--text-primary);
+  }
+  

@@ -1,0 +1,41 @@
+.client-card {
+  background: linear-gradient(135deg, #111111 0%, #333333 100%);
+  border: 1px solid #edf2f7;
+  width: 85%;
+  margin: 15px auto;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+  color: white;
+}
+
+.client-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.client-body {
+  cursor: pointer;
+}
+
+.client-body p {
+  margin: 8px 0;
+  color: #e2e8f0;
+}
+
+.pin-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 5px 10px;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pin-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+} 

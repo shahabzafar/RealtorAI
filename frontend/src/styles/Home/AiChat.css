@@ -1,0 +1,110 @@
+.ai-chat {
+    background-color: #000;
+    padding: 60px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden; /* Contain background effects */
+}
+
+.ai-chat .container {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    border: none; /* No extra border */
+}
+
+.ai-chat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(white 1px, transparent 1px) 0 0, 
+                linear-gradient(90deg, white 1px, transparent 1px) 0 0;
+    background-size: 10px 10px; /* Higher density grid with thicker lines */
+    opacity: 0.15; /* Slightly more visible grid */
+    pointer-events: none;
+    z-index: 1;
+}
+
+.ai-chat::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 300%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 169, 77, 0.3), transparent 70%);
+    animation: dynamicMotion 6s linear infinite; /* Continuous motion */
+    z-index: 0;
+}
+
+@keyframes dynamicMotion {
+    0% {
+        transform: translate(-100%, -50%) scale(1.5); /* Start off-screen left */
+    }
+    20% {
+        transform: translate(0%, -25%) scale(1.8); /* Move to center */
+    }
+    30% {
+        background: radial-gradient(circle, rgba(0, 0, 0, 1), rgba(0, 0, 0, 1) 80%); /* Fade to black */
+        transform: translate(0%, -25%) scale(1.8);
+    }
+    50% {
+        transform: translate(100%, -50%) scale(1.5); /* Move off-screen right */
+    }
+    70% {
+        transform: translate(0%, -25%) scale(1.8); /* Move back to center */
+    }
+    80% {
+        background: radial-gradient(circle, rgba(0, 0, 0, 1), rgba(0, 0, 0, 1) 80%); /* Fade to black */
+        transform: translate(0%, -25%) scale(1.8);
+    }
+    100% {
+        transform: translate(-100%, -50%) scale(1.5); /* Reset to start */
+    }
+}
+
+.ai-chat h3 {
+    font-size: 2.2rem;
+    color: #fff; /* White text */
+    margin-bottom: 25px;
+    font-family: 'Poppins', sans-serif; /* Classy, light font */
+    z-index: 2;
+    position: relative;
+}
+
+.ai-chat button {
+    padding: 12px 30px;
+    background-color: #f03413e0; /* Consistent orange color */
+    color: #000;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 15px; /* Rounded rectangle */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    z-index: 2;
+    position: relative;
+}
+
+.ai-chat button:hover {
+    background-color: rgb(255, 255, 255); /* Slightly darker orange on hover */
+    transform: scale(1.02); /* Subtle hover effect */
+}
+
+.ai-chat button:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+    .ai-chat h3 {
+        font-size: 1.8rem;
+    }
+    
+    .ai-chat button {
+        font-size: 1rem;
+        padding: 10px 25px;
+    }
+}

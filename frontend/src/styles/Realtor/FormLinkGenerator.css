@@ -1,0 +1,140 @@
+.form-link-generator {
+  background: linear-gradient(135deg, #111111 0%, #333333 100%);
+  width: 100%;
+  margin: 20px 0;
+  padding: 24px 8%;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  color: white;
+}
+
+.generate-link-btn {
+  width: 100%;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.generate-link-btn:hover {
+  background: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.generated-link-content {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.link-qr-container {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.link-section {
+  flex: 2;
+}
+
+.link-section h3 {
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.link-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.link-display input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.link-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.copy-btn, .share-btn {
+  padding: 10px 20px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.copy-btn:hover, .share-btn:hover {
+  background: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+.qr-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.qr-section p {
+  color: var(--text-primary);
+}
+
+.share-drawer {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.share-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.share-option:hover {
+  background: var(--hover-bg);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .link-qr-container {
+    flex-direction: column;
+  }
+  
+  .qr-section {
+    width: 100%;
+    margin-top: 20px;
+  }
+}
+
+.form-link-content {
+  max-width: 1440px;
+  margin: 0 auto;
+} 
