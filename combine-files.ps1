@@ -11,7 +11,7 @@ if (Test-Path $masterFile) {
 
 # Get *all* files recursively, then filter by extension
 $files = Get-ChildItem -Path . -Recurse -File | Where-Object {
-    $_.Extension -in ('.js', '.jsx', '.json')
+    $_.Extension -in ('.js', '.jsx', '.css')
 }
 
 # Group them by their directory (folder)

@@ -78,7 +78,7 @@ function FormPage() {
 
   if (submitted) {
     return (
-      <div className="form-page-container">
+      <div className="form-page-container dark-mode">
         <h2>Thank you!</h2>
         <p>Your information has been submitted.</p>
       </div>
@@ -86,7 +86,7 @@ function FormPage() {
   }
 
   return (
-    <div className="form-page-container">
+    <div className="form-page-container dark-mode">
       <h1>Contact Form</h1>
       {!realtorId && (
         <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>

@@ -1,44 +1,91 @@
+/* Make sure the container is styled in dark mode */
 .form-page-container.dark-mode {
-    background-color: #121212;
-    color: #ffffff;
-    min-height: 100vh;
-    padding: 2rem;
+  background-color: #121212;
+  color: #ffffff;
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.form-page-container.dark-mode h1 {
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+}
+
+.form-page-container.dark-mode h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+}
+
+.form-page-container.dark-mode p {
+  font-size: 1rem;
+  color: #cccccc;
+  margin-bottom: 1rem;
+}
+
+/* The main form wrapper */
+.client-form {
+  max-width: 500px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Each field group: label + input/textarea */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Inputs, selects, textareas styled for dark mode */
+.client-form input,
+.client-form select,
+.client-form textarea {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #1e1e1e; /* dark background */
+  color: #ffffff;           /* white text */
+  border: 1px solid #333;   /* subtle border */
+  border-radius: 4px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.client-form textarea {
+  min-height: 80px;
+}
+
+/* Submit button styling */
+.client-form button {
+  padding: 0.75rem;
+  background-color: #3f51b5;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.client-form button:hover {
+  background-color: #2f4095;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .form-page-container.dark-mode {
+    padding: 1rem;
   }
   
   .client-form {
-    max-width: 500px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
+    max-width: 100%;
   }
-  
-  .form-group {
-    margin-bottom: 1rem;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-  
-  .client-form input,
-  .client-form select,
-  .client-form textarea {
-    width: 100%;
-    padding: 0.5rem;
-    background-color: #1e1e1e;
-    color: #fff;
-    border: 1px solid #333;
-    border-radius: 4px;
-  }
-  
-  .client-form button {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background-color: #3f51b5;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
+}
