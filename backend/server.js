@@ -160,21 +160,11 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${BACKEND_URL}/auth/google/callback`,
-      proxy: true
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        console.log('Google profile:', profile);
         let realtor = await findRealtorByGoogleId(profile.id);
-        
-        if (!realtor) {
-          console.log('Creating new realtor with data:', {
-            googleId: profile.id,
-            firstName: profile.name.givenName,
-            lastName: profile.name.familyName,
-            email: profile.emails[0].value
-          });
-          
+        if (!realtor) {        
           realtor = await createRealtor({
             googleId: profile.id,
             firstName: profile.name.givenName,
@@ -183,16 +173,8 @@ passport.use(
             phoneNumber: ''
           });
         }
-        
-        console.log('Realtor object:', realtor);
-        return done(null, {
-          id: realtor.id,
-          firstName: realtor.first_name,
-          lastName: realtor.last_name,
-          email: realtor.email
-        });
+        return done(null, realtor);
       } catch (error) {
-        console.error('Error in Google Strategy:', error);
         return done(error);
       }
     }
@@ -347,17 +329,9 @@ app.get(
 
 app.get(
   '/auth/google/callback',
-  (req, res, next) => {
-    console.log('Callback received:', req.url);
-    next();
-  },
-  passport.authenticate('google', { 
-    failureRedirect: '/signin',
-    successRedirect: '/realtor',
-    session: true
-  }),
+  passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    console.log('Authentication successful, user:', req.user);
+    res.redirect(`${FRONTEND_URL}/main`); // after Google login, go to main page
   }
 );
 
