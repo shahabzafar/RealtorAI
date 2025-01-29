@@ -1,19 +1,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './styles/Home/global.css';
-import App from './App';
 import axios from 'axios';
+import App from './App';
 
-// Set default axios configuration
-const backendUrl = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:5000'
-  : 'https://realtoriqbackend.onrender.com';
+import './styles/Home/global.css';
 
+const isProd = (process.env.REACT_APP_NODE_ENV === 'production');
+const backendUrl = isProd
+  ? process.env.REACT_APP_BACKEND_URL || 'https://realtoriqbackend.onrender.com'
+  : 'http://localhost:5000';
+
+// Set default axios configuration for the frontend
 axios.defaults.baseURL = backendUrl;
 axios.defaults.withCredentials = true;
 
-console.log('Current environment:', process.env.NODE_ENV);
-console.log('Backend URL:', backendUrl);
+console.log('React Environment:', process.env.REACT_APP_NODE_ENV);
+console.log('Using Backend URL:', axios.defaults.baseURL);
 
 ReactDOM.render(
   <React.StrictMode>
@@ -21,5 +23,3 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById('root')
 );
-
-

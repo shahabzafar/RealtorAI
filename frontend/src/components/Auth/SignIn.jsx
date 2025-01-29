@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../../styles/Auth/Auth.css';
 
-const SignIn = ({ onLogin, setUser }) => {
+const SignIn = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -12,16 +12,13 @@ const SignIn = ({ onLogin, setUser }) => {
     e.preventDefault();
     try {
       const response = await axios.post('/auth/login', { email, password });
-      console.log('Login successful:', response.data);
-
       setUser({
         id: response.data.user.id,
         email: response.data.user.email,
         firstName: response.data.user.firstName,
         lastName: response.data.user.lastName,
-        displayName: response.data.user.displayName,
+        displayName: response.data.user.displayName
       });
-
       navigate('/realtor');
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message);
@@ -30,7 +27,9 @@ const SignIn = ({ onLogin, setUser }) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'https://realtoriqbackend.onrender.com/auth/google';
+    // Use the environment variable
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    window.location.href = `${backendUrl}/auth/google`;
   };
 
   return (
@@ -38,7 +37,6 @@ const SignIn = ({ onLogin, setUser }) => {
       <div className="auth-form">
         <h2>Sign In</h2>
         <form onSubmit={handleSubmit}>
-          {/* Email */}
           <div className="form-group">
             <input
               type="email"
@@ -49,7 +47,6 @@ const SignIn = ({ onLogin, setUser }) => {
             />
           </div>
 
-          {/* Password */}
           <div className="form-group">
             <input
               type="password"
@@ -60,7 +57,6 @@ const SignIn = ({ onLogin, setUser }) => {
             />
           </div>
 
-          {/* Submit Button */}
           <button type="submit" className="auth-button">
             Sign In
           </button>
@@ -68,14 +64,12 @@ const SignIn = ({ onLogin, setUser }) => {
 
         <div className="divider">or</div>
 
-        {/* Google Login Button */}
         <button onClick={handleGoogleLogin} className="google-button">
           Login with Google
         </button>
 
-        {/* Link to Sign Up */}
         <p className="auth-link">
-          Don't have an account? <Link to="/signup">Sign Up</Link>
+          Don&apos;t have an account? <Link to="/signup">Sign Up</Link>
         </p>
       </div>
     </div>

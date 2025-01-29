@@ -10,17 +10,10 @@ import FormPage from './components/Form/FormPage';
 import SignIn from './components/Auth/SignIn';
 import SignUp from './components/Auth/SignUp';
 import PrivateRoute from './components/Auth/PrivateRoute';
+
 import './styles/Navbar.css';
 import './styles/Realtor/global.css';
 import './styles/darkmode.css';
-
-
-
-axios.defaults.withCredentials = true;
-// Change baseURL based on environment
-axios.defaults.baseURL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:5000'
-  : 'https://realtoriq.onrender.com';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -29,11 +22,10 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get('/auth/status', { withCredentials: true });
-        console.log('Auth status response:', response.data);
+        const response = await axios.get('/auth/status');
         if (response.data.authenticated) {
-          console.log('User data:', response.data.user);
           setUser(response.data.user);
+          // If user is already authenticated and hits /main, redirect to /realtor
           if (window.location.pathname === '/main') {
             window.location.replace('/realtor');
           }
@@ -47,12 +39,6 @@ function App() {
 
     checkAuth();
   }, []);
-
-  const handleLogin = () => {
-    // For local login, we do it inside SignIn
-    // For Google login:
-    window.location.href = 'https://realtoriqbackend.onrender.com/auth/google';
-  };
 
   const handleLogout = async () => {
     try {
@@ -72,10 +58,13 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomeApp user={user} onLogout={handleLogout} />} />
+        
+        {/* If user is logged in, /main -> /realtor, else /signin */}
         <Route 
           path="/main" 
           element={user ? <Navigate to="/realtor" /> : <Navigate to="/signin" />} 
         />
+
         <Route
           path="/realtor"
           element={
@@ -93,17 +82,6 @@ function App() {
           element={user ? <Navigate to="/realtor" /> : <SignUp setUser={setUser} />} 
         />
 
-        {/* Main dashboard after login */}
-        <Route
-          path="/main"
-          element={
-            <PrivateRoute user={user}>
-              <MainPage user={user} onLogout={handleLogout} />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Settings page */}
         <Route
           path="/settings"
           element={
@@ -113,7 +91,7 @@ function App() {
           }
         />
 
-        {/* Public form page for each realtor */}
+        {/* Public form page */}
         <Route path="/form/:realtorId" element={<FormPage />} />
       </Routes>
     </Router>

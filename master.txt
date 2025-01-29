@@ -59,21 +59,23 @@ const helmet = require('helmet');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 
-// First declare the environment variables 
-const FRONTEND_URL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:3000'
-  : 'https://realtortempai.onrender.com';
+// First declare environment variables
+const FRONTEND_URL =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://realtoriq.onrender.com';
 
-const BACKEND_URL = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5000'
-  : 'https://realtortempaibackend.onrender.com';
+const BACKEND_URL =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5000'
+    : 'https://realtoriqbackend.onrender.com';
 
 // Force development mode if needed
 if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_ENV = 'development';
 }
 
-// Then log them
+// Log environment info
 console.log('Current environment:', process.env.NODE_ENV);
 console.log('Frontend URL:', FRONTEND_URL);
 console.log('Backend URL:', BACKEND_URL);
@@ -81,40 +83,110 @@ console.log('Backend URL:', BACKEND_URL);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware setup
+// Middleware
 app.use(helmet());
 app.use(express.json());
-app.set('trust proxy', 1); // Trust first proxy
-
-// Rate limiter
+app.set('trust proxy', 1); // trust first proxy
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per window
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
 });
 app.use(limiter);
 
-// Database pool
+// Update CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://realtoriq.onrender.com' 
+    : 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Origin', 'Authorization']
+}));
+
+// Add a specific CORS configuration for the form endpoint
+app.options('/api/form/:realtorId', cors()); // Enable pre-flight for this specific route
+
+// Database pool configuration - Always use production database
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // Adjust based on your SSL configuration
-  },
+    rejectUnauthorized: false
+  }
 });
 
-// Helper functions
+// Add better error logging
+pool.on('error', (err) => {
+  console.error('Database connection error:', err);
+  console.error('Using DATABASE_URL:', process.env.DATABASE_URL);
+});
+
+// Add a test connection on startup
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Error testing database connection:', err);
+  } else {
+    console.log('Database connected successfully');
+  }
+});
+
+// Session config
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  proxy: true // Add this for secure cookies behind a proxy
+};
+
+if (process.env.NODE_ENV === 'production') {
+  const redisClient = redis.createClient({
+    url: process.env.REDIS_URL,
+  });
+  redisClient.connect().catch(console.error);
+  redisClient.on('connect', () => console.log('Connected to Redis successfully.'));
+  redisClient.on('error', (err) => console.error('Redis connection error:', err));
+}
+
+app.use(session(sessionConfig));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// ============================
+// Database helper functions
+// ============================
 async function findRealtorByGoogleId(googleId) {
-  const result = await pool.query('SELECT * FROM realtors WHERE google_id = $1', [googleId]);
-  return result.rows[0];
+  try {
+    console.log('Looking for realtor with Google ID:', googleId);
+    const result = await pool.query('SELECT * FROM realtors WHERE google_id = $1', [googleId]);
+    console.log('Query result:', result.rows);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error in findRealtorByGoogleId:', error);
+    throw error;
+  }
 }
 
 async function createRealtor(userData) {
-  const { googleId, firstName, lastName, email, phoneNumber } = userData;
-  const result = await pool.query(
-    `INSERT INTO realtors (google_id, first_name, last_name, email, phone_number)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [googleId, firstName, lastName, email, phoneNumber]
-  );
-  return result.rows[0];
+  try {
+    console.log('Creating new realtor:', userData);
+    const { googleId, firstName, lastName, email, phoneNumber } = userData;
+    const result = await pool.query(
+      `INSERT INTO realtors (google_id, first_name, last_name, email, phone_number, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       RETURNING *`,
+      [googleId, firstName, lastName, email, phoneNumber]
+    );
+    console.log('Created realtor:', result.rows[0]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error in createRealtor:', error);
+    throw error;
+  }
 }
 
 async function findRealtorById(id) {
@@ -122,83 +194,11 @@ async function findRealtorById(id) {
   return result.rows[0];
 }
 
-async function saveSellerData(realtorId, data) {
-  const {
-    firstName,
-    lastName,
-    email,
-    askingPrice,
-    size,
-    propertyType,
-    bedrooms,
-    bathrooms,
-    location,
-  } = data;
+// ============================
+// Passport Strategies
+// ============================
 
-  await pool.query(
-    `INSERT INTO seller_data (
-      realtor_id, first_name, last_name, email, asking_price, size, property_type, bedrooms, bathrooms, location
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-    [
-      realtorId,
-      firstName,
-      lastName,
-      email,
-      askingPrice,
-      size,
-      propertyType,
-      bedrooms,
-      bathrooms,
-      location,
-    ]
-  );
-}
-
-async function getSellerDataByRealtorId(realtorId) {
-  const result = await pool.query('SELECT * FROM seller_data WHERE realtor_id = $1', [realtorId]);
-  return result.rows;
-}
-
-// Session configuration
-const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-  },
-};
-
-// Configure Redis for production environment
-if (process.env.NODE_ENV === 'production') {
-  const redisClient = redis.createClient({
-    url: process.env.REDIS_URL,
-  });
-
-  redisClient.connect().catch(console.error);
-  redisClient.on('connect', () => console.log('Connected to Redis successfully.'));
-  redisClient.on('error', (err) => console.error('Redis connection error:', err));
-
-  sessionConfig.store = new RedisStore({ client: redisClient });
-}
-
-// CORS settings
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-  })
-);
-
-// Session and Passport middleware
-app.use(session(sessionConfig));
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Passport strategies
+// Google OAuth strategy
 passport.use(
   new GoogleStrategy(
     {
@@ -209,12 +209,13 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let realtor = await findRealtorByGoogleId(profile.id);
-        if (!realtor) {
+        if (!realtor) {        
           realtor = await createRealtor({
             googleId: profile.id,
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
             email: profile.emails[0].value,
+            phoneNumber: ''
           });
         }
         return done(null, realtor);
@@ -225,6 +226,7 @@ passport.use(
   )
 );
 
+// Local strategy
 passport.use(
   new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
     try {
@@ -247,7 +249,35 @@ passport.use(
   })
 );
 
-// Authentication routes
+// Serialize / Deserialize
+passport.serializeUser((user, done) => {
+  console.log('Serializing user:', user);
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    console.log('Deserializing user id:', id);
+    const result = await pool.query('SELECT * FROM realtors WHERE id = $1', [id]);
+    const user = result.rows[0];
+    if (user) {
+      done(null, {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email
+      });
+    } else {
+      done(new Error('User not found'));
+    }
+  } catch (error) {
+    done(error);
+  }
+});
+
+// ============================
+// Authentication Routes
+// ============================
 app.post(
   '/auth/register',
   [
@@ -266,13 +296,13 @@ app.post(
     const { firstName, lastName, email, password, phoneNumber } = req.body;
 
     try {
-      // Check if the email already exists
+      // Check if email exists
       const existingUser = await pool.query('SELECT * FROM realtors WHERE email = $1', [email]);
       if (existingUser.rows.length > 0) {
         return res.status(400).json({ message: 'Email already in use.' });
       }
 
-      // Hash the password
+      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create new realtor
@@ -283,7 +313,7 @@ app.post(
       );
       const newRealtor = result.rows[0];
 
-      // Automatically log in the new user
+      // Auto-login
       req.login(newRealtor, (err) => {
         if (err) return next(err);
         res.json({
@@ -291,11 +321,9 @@ app.post(
           user: {
             id: newRealtor.id,
             email: newRealtor.email,
-            firstName: newRealtor.first_name || newRealtor.firstName,
-            lastName: newRealtor.last_name || newRealtor.lastName,
-            displayName: `${newRealtor.first_name || newRealtor.firstName} ${
-              newRealtor.last_name || newRealtor.lastName
-            }`,
+            firstName: newRealtor.first_name,
+            lastName: newRealtor.last_name,
+            displayName: `${newRealtor.first_name} ${newRealtor.last_name}`,
           },
         });
       });
@@ -306,27 +334,30 @@ app.post(
   }
 );
 
-app.post(
-  '/auth/login',
-  [body('email').isEmail(), body('password').exists()],
+app.post('/auth/login', [body('email').isEmail(), body('password').exists()], 
   (req, res, next) => {
     passport.authenticate('local', (err, realtor, info) => {
-      if (err) return next(err);
+      if (err) {
+        console.error('Login error:', err);
+        return next(err);
+      }
       if (!realtor) {
-        return res.status(400).json({ message: info.message });
+        return res.status(401).json({ message: info.message });
       }
       req.logIn(realtor, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error('Session error:', err);
+          return next(err);
+        }
+        console.log('Login successful, session:', req.session);
         res.json({
           message: 'Login successful',
           user: {
             id: realtor.id,
             email: realtor.email,
-            firstName: realtor.first_name || realtor.firstName,
-            lastName: realtor.last_name || realtor.lastName,
-            displayName: `${realtor.first_name || realtor.firstName} ${
-              realtor.last_name || realtor.lastName
-            }`,
+            firstName: realtor.first_name,
+            lastName: realtor.last_name,
+            displayName: `${realtor.first_name} ${realtor.last_name}`,
           },
         });
       });
@@ -334,60 +365,51 @@ app.post(
   }
 );
 
-// Serialize and deserialize user
-passport.serializeUser((realtor, done) => {
-  done(null, realtor.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const realtor = await findRealtorById(id);
-    done(null, realtor);
-  } catch (error) {
-    done(error);
-  }
-});
-
-// OAuth routes
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get(
+  '/auth/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+  })
+);
 
 app.get(
   '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    console.log('Authenticated user:', req.user);
-    console.log('Redirecting to:', `${FRONTEND_URL}/realtor`);
-    res.redirect(`${FRONTEND_URL}/realtor`);
+    res.redirect(`${FRONTEND_URL}/main`); // after Google login, go to main page
   }
 );
 
-// Route to check if the user is authenticated
-app.get('/auth/user', (req, res) => {
-  console.log('Full req.user object:', req.user);
+// Add a route to check authentication status
+app.get('/auth/status', (req, res) => {
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  res.json({
+    authenticated: req.isAuthenticated(),
+    user: req.user
+  });
+});
 
+// Check auth
+app.get('/auth/user', (req, res) => {
   if (req.isAuthenticated() && req.user) {
     const userData = {
       user: {
         id: req.user.id,
         email: req.user.email,
-        firstName: req.user.first_name || req.user.firstName,
-        lastName: req.user.last_name || req.user.lastName,
-        displayName: `${req.user.first_name || req.user.firstName} ${
-          req.user.last_name || req.user.lastName
-        }`,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        displayName: `${req.user.firstName} ${req.user.lastName}`,
       },
     };
-    console.log('Sending user data to frontend:', userData);
     res.json(userData);
   } else {
-    console.log('No authenticated user found');
     res.status(401).json({ message: 'Unauthorized' });
   }
 });
 
-// Logout route
+// Logout
 app.get('/auth/logout', (req, res) => {
-  console.log('Logout requested');
   req.logout((err) => {
     if (err) {
       console.error('Logout error:', err);
@@ -398,91 +420,221 @@ app.get('/auth/logout', (req, res) => {
         console.error('Session destruction error:', err);
         return res.status(500).json({ error: 'Failed to destroy session' });
       }
-      console.log('Logout successful');
       res.json({ message: 'Logged out successfully' });
     });
   });
 });
 
-// Endpoint for generating Zapier link
-app.post('/generate-link', async (req, res) => {
-  try {
-    const zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL;
-    await axios.post(zapierWebhookUrl, {
-      realtorId: req.body.realtorId,
-    });
+// Helper: check if user is authenticated
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  return res.status(401).json({ message: 'Unauthorized' });
+}
 
-    const generatedLink = 'https://form-interface-ee593b.zapier.app/';
-    if (generatedLink) {
-      console.log('Received link from Zapier:', generatedLink);
-      res.json({ link: generatedLink });
-    } else {
-      console.error('Error: Zapier response does not contain a link.');
-      res.status(500).json({ error: 'Failed to generate link.' });
-    }
+// =====================================
+//  Client (Buyer/Seller) Form Endpoints
+// =====================================
+
+// Public form submission endpoint
+app.post('/api/form/:realtorId', async (req, res) => {
+  const realtorId = req.params.realtorId;
+  const {
+    firstName,
+    lastName,
+    phone,
+    email,
+    clientType,
+    budget,
+    location,
+    amenities,
+    property_images,
+    notes,
+  } = req.body;
+
+  try {
+    const insertQuery = `
+      INSERT INTO clients
+        (realtor_id, client_type, first_name, last_name, phone, email, budget, location, amenities, property_images, notes, created_at)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      RETURNING *
+    `;
+    
+    const values = [
+      realtorId,
+      clientType,
+      firstName,
+      lastName,
+      phone,
+      email,
+      budget,
+      location,
+      amenities,
+      property_images,
+      notes
+    ];
+
+    const result = await pool.query(insertQuery, values);
+    console.log('Inserted client:', result.rows[0]); // Debug log
+    
+    return res.json({ 
+      message: 'Form submitted successfully', 
+      client: result.rows[0] 
+    });
   } catch (error) {
-    console.error('Error generating link from Zapier:', error);
-    res.status(500).send('Error generating link');
+    console.error('Error saving form data:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-// Endpoint for receiving data from Zapier
-app.post(
-  '/setSellerData',
+// Get all clients for a specific realtor
+app.get('/api/clients', ensureAuthenticated, async (req, res) => {
+  try {
+    console.log('Fetching clients for realtor:', req.user.id); // Debug log
+    
+    const query = `
+      SELECT * FROM clients 
+      WHERE realtor_id = $1 
+      ORDER BY created_at DESC
+    `;
+    
+    const { rows } = await pool.query(query, [req.user.id]);
+    console.log('Found clients:', rows); // Debug log
+    
+    return res.json(rows);
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Pin/Unpin a client
+app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
+  const { clientId } = req.params;
+  const { pinned } = req.body; // boolean
+  try {
+    const query = `
+      UPDATE clients
+      SET pinned = $1, updated_at = NOW()
+      WHERE id = $2 AND realtor_id = $3
+      RETURNING *
+    `;
+    const values = [pinned, clientId, req.user.id];
+    const { rows } = await pool.query(query, values);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Client not found or not authorized' });
+    }
+    return res.json(rows[0]);
+  } catch (error) {
+    console.error('Error updating pin status:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Settings update
+app.put(
+  '/api/realtor/settings',
   ensureAuthenticated,
   [
-    body('LeadName').isString(),
-    body('Contact').isString(),
-    body('LeadEmail').isEmail(),
-    body('AskingPrice').isNumeric(),
+    body('firstName').optional().isString(),
+    body('lastName').optional().isString(),
+    body('email').optional().isEmail(),
+    body('phoneNumber').optional().isMobilePhone(),
+    body('password').optional().isLength({ min: 6 }),
   ],
   async (req, res) => {
+    // If user is OAuth-based (google_id != null, password == null?), do not allow password changes
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
+    const { firstName, lastName, email, phoneNumber, password } = req.body;
     try {
-      const userId = req.user.id;
-      await saveSellerData(userId, req.body);
-      res.json({ message: 'Data received successfully!' });
+      // fetch the user
+      const realtor = await findRealtorById(req.user.id);
+      if (!realtor) return res.status(404).json({ error: 'User not found' });
+
+      // if they have a google_id and no local password, do not allow password changes
+      let hashedPassword = null;
+      if (realtor.google_id && realtor.password == null && password) {
+        // Do not allow changing password for OAuth user
+        return res
+          .status(400)
+          .json({ error: 'Cannot update password for an OAuth-based account.' });
+      }
+      if (password && !realtor.google_id) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+
+      // if they have google oauth, allow email to be changed only as "contact email" but not for login
+      // (Up to you how strictly you want to handle this. This is a simplified example.)
+
+      const updateQuery = `
+        UPDATE realtors
+        SET
+          first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          email = COALESCE($3, email),
+          phone_number = COALESCE($4, phone_number),
+          password = COALESCE($5, password),
+          updated_at = NOW()
+        WHERE id = $6
+        RETURNING *
+      `;
+      const values = [
+        firstName || null,
+        lastName || null,
+        email || null,
+        phoneNumber || null,
+        hashedPassword || null,
+        req.user.id,
+      ];
+
+      const { rows } = await pool.query(updateQuery, values);
+      const updatedRealtor = rows[0];
+      return res.json({
+        message: 'Settings updated',
+        user: {
+          id: updatedRealtor.id,
+          email: updatedRealtor.email,
+          firstName: updatedRealtor.first_name,
+          lastName: updatedRealtor.last_name,
+          phoneNumber: updatedRealtor.phone_number,
+          // do not return password
+        },
+      });
     } catch (error) {
-      console.error('Error saving seller data:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Settings update error:', error);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 );
 
-function ensureAuthenticated(req, res, next) {
-  const zapierToken = req.headers['BypassForZapier']; // Use a custom header for Zapier
-
-  if (req.isAuthenticated()) {
-    return next();
-  }
-
-  if (zapierToken === process.env.ZAPIER_TOKEN) {
-    return next(); 
-  }
-
-  return res.status(401).json({ message: 'Unauthorized' });
-}
-
-// Endpoint for frontend data request
-app.get('/getSellerData', ensureAuthenticated, async (req, res) => {
-  console.log('Authenticated user:', req.user);
-  try {
-    const userId = req.user.id;
-    const data = await getSellerDataByRealtorId(userId);
-    res.json(data);
-  } catch (error) {
-    console.error('Error fetching seller data:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+// Example "generate link" (similar to your Zapier route) => or you can skip
+app.post('/generate-link', ensureAuthenticated, async (req, res) => {
+  // You can build a front-end route like /form/${req.user.id} or a shorter slug 
+  const generatedLink = `${FRONTEND_URL}/form/${req.user.id}`;
+  return res.json({ link: generatedLink });
 });
 
-// Start the server
+// Add a debug route to check session
+app.get('/auth/check', (req, res) => {
+  console.log('Session check:', {
+    session: req.session,
+    user: req.user,
+    isAuthenticated: req.isAuthenticated()
+  });
+  res.json({
+    authenticated: req.isAuthenticated(),
+    user: req.user,
+    session: req.session
+  });
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on ${BACKEND_URL}`);
   console.log('Environment:', process.env.NODE_ENV);
 });
 "
@@ -500,6 +652,7 @@ package.json:
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.7",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
@@ -538,98 +691,6 @@ package.json:
     "node": "22.11.0"
   }
 }
-"
-
-
-common:
-header.jsx:
-"
-import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import '../../styles/Home/Header.css'; // you can move/rename this if you prefer
-
-const Header = ({ user, onLogout }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  // Close dropdown if clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <header className="containerHeader">
-      <h1>AI Realtor</h1>
-      <nav>
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-
-          {/*
-            Remove this if you don’t want a /buy route anymore:
-          */}
-          {/* <li>
-            <Link to="/buy">Buy</Link>
-          </li> */}
-
-          <li>
-            <Link to="/realtor">Realtor</Link>
-          </li>
-
-          {user ? (
-            // If user is logged in
-            <li className="user-menu" ref={dropdownRef}>
-              <button
-                className="user-menu-button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              >
-                {user.firstName && user.lastName
-                  ? `${user.firstName} ${user.lastName}`
-                  : user.displayName || 'Welcome User'}
-                &nbsp;▼
-              </button>
-              {isDropdownOpen && (
-                <div className="user-dropdown">
-                  <button
-                    onClick={() => {
-                      onLogout();
-                      setIsDropdownOpen(false);
-                    }}
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </li>
-          ) : (
-            // If user is not logged in
-            <>
-              <li>
-                <Link to="/signin" className="sign-in-link">
-                  Sign In
-                </Link>
-              </li>
-              <li>
-                <Link to="/signup" className="sign-up-link">
-                  Sign Up
-                </Link>
-              </li>
-            </>
-          )}
-        </ul>
-      </nav>
-    </header>
-  );
-};
-
-export default Header;
 "
 
 
@@ -673,98 +734,118 @@ import axios from 'axios';
 
 import HomeApp from './components/Home/HomeApp';
 import RealtorApp from './components/Realtor/RealtorApp';
+import MainPage from './components/MainPage/MainPage';
+import SettingsPage from './components/Settings/SettingsPage';
+import FormPage from './components/Form/FormPage';
 import SignIn from './components/Auth/SignIn';
 import SignUp from './components/Auth/SignUp';
 import PrivateRoute from './components/Auth/PrivateRoute';
+import './styles/Navbar.css';
+import './styles/Realtor/global.css';
+import './styles/darkmode.css';
 
-// Configure Axios
+
+
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'https://realtortempaibackend.onrender.com';
+// Change baseURL based on environment
+axios.defaults.baseURL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000'
+  : 'https://realtoriq.onrender.com';
 
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user data on component mount
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get('/auth/user');
-      console.log('Raw user data received:', res.data);
-      if (res.data && res.data.user) {
-        setUser({
-          id: res.data.user.id,
-          email: res.data.user.email,
-          firstName: res.data.user.firstName,
-          lastName: res.data.user.lastName,
-          displayName: res.data.user.displayName,
-        });
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchUser();
+    const checkAuth = async () => {
+      try {
+        const response = await axios.get('/auth/status', { withCredentials: true });
+        console.log('Auth status response:', response.data);
+        if (response.data.authenticated) {
+          console.log('User data:', response.data.user);
+          setUser(response.data.user);
+          if (window.location.pathname === '/main') {
+            window.location.replace('/realtor');
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const handleLogin = () => {
-    window.location.href = 'https://realtortempaibackend.onrender.com/auth/google';
+    // For local login, we do it inside SignIn
+    // For Google login:
+    window.location.href = 'https://realtoriqbackend.onrender.com/auth/google';
   };
 
   const handleLogout = async () => {
     try {
       await axios.get('/auth/logout');
       setUser(null);
-      window.location.href = '/'; // Redirect to home after logout
+      window.location.href = '/';
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('Logout error:', error);
     }
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Router>
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : (
-        <Routes>
-          <Route path="/" element={<HomeApp user={user} onLogout={handleLogout} />} />
-          <Route
-            path="/signin"
-            element={
-              user ? (
-                <Navigate to="/realtor" />
-              ) : (
-                <SignIn onLogin={handleLogin} setUser={setUser} />
-              )
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              user ? (
-                <Navigate to="/realtor" />
-              ) : (
-                <SignUp setUser={setUser} />
-              )
-            }
-          />
-          <Route
-            path="/realtor"
-            element={
-              <PrivateRoute user={user}>
-                <RealtorApp user={user} onLogout={handleLogout} />
-              </PrivateRoute>
-            }
-          />
-          {/* Add other routes as needed */}
-        </Routes>
-      )}
+      <Routes>
+        <Route path="/" element={<HomeApp user={user} onLogout={handleLogout} />} />
+        <Route 
+          path="/main" 
+          element={user ? <Navigate to="/realtor" /> : <Navigate to="/signin" />} 
+        />
+        <Route
+          path="/realtor"
+          element={
+            <PrivateRoute user={user}>
+              <RealtorApp user={user} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/signin" 
+          element={user ? <Navigate to="/realtor" /> : <SignIn setUser={setUser} />} 
+        />
+        <Route 
+          path="/signup" 
+          element={user ? <Navigate to="/realtor" /> : <SignUp setUser={setUser} />} 
+        />
+
+        {/* Main dashboard after login */}
+        <Route
+          path="/main"
+          element={
+            <PrivateRoute user={user}>
+              <MainPage user={user} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Settings page */}
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute user={user}>
+              <SettingsPage user={user} setUser={setUser} />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Public form page for each realtor */}
+        <Route path="/form/:realtorId" element={<FormPage />} />
+      </Routes>
     </Router>
   );
 }
@@ -778,6 +859,18 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './styles/Home/global.css';
 import App from './App';
+import axios from 'axios';
+
+// Set default axios configuration
+const backendUrl = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000'
+  : 'https://realtoriqbackend.onrender.com';
+
+axios.defaults.baseURL = backendUrl;
+axios.defaults.withCredentials = true;
+
+console.log('Current environment:', process.env.NODE_ENV);
+console.log('Backend URL:', backendUrl);
 
 ReactDOM.render(
   <React.StrictMode>
@@ -790,6 +883,61 @@ ReactDOM.render(
 "
 
 
+components:
+Navbar.jsx:
+"
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import '../styles/Navbar.css';
+
+const Navbar = ({ user, onLogout }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.displayName || user?.email || 'User';
+  };
+
+  return (
+    <nav className="navbar">
+      <div className="navbar-content">
+        <Link to="/" className="navbar-brand">
+          AI Realtor
+        </Link>
+        <div className="nav-links">
+          <Link to="/">Home</Link>
+          <Link to="/buy">Buy</Link>
+          <Link to="/realtor">Realtor</Link>
+          {user ? (
+            <div className="user-menu">
+              <button 
+                className="user-menu-button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              >
+                <span className="user-name">{getUserDisplayName()}</span>
+                <span className="dropdown-arrow">▼</span>
+              </button>
+              {isDropdownOpen && (
+                <div className="user-dropdown">
+                  <button onClick={onLogout}>Logout</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/signin">Sign In</Link>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar; 
+"
+
+
 Auth:
 PrivateRoute.jsx:
 "
@@ -797,7 +945,9 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 const PrivateRoute = ({ user, children }) => {
-  return user ? children : <Navigate to="/signin" />;
+  const isAuthenticated = !!user; // Check if user exists
+  
+  return isAuthenticated ? children : <Navigate to="/signin" />;
 };
 
 export default PrivateRoute;
@@ -837,7 +987,7 @@ const SignIn = ({ onLogin, setUser }) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'https://realtortempaibackend.onrender.com/auth/google';
+    window.location.href = 'https://realtoriqbackend.onrender.com/auth/google';
   };
 
   return (
@@ -1033,7 +1183,237 @@ export default SignUp;
 "
 
 
+Buy:
+BuyApp.jsx:
+"
+"
+
+
+Form:
+FormPage.jsx:
+"
+import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import '../../styles/Form/FormPage.css';
+
+function FormPage() {
+  const { realtorId } = useParams();
+  const [clientType, setClientType] = useState('buyer');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [budget, setBudget] = useState('');
+  const [location, setLocation] = useState('');
+  const [amenities, setAmenities] = useState('');
+  const [propertyImages, setPropertyImages] = useState([]);
+  const [notes, setNotes] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (!realtorId) {
+        throw new Error('Realtor ID is missing');
+      }
+
+      const payload = {
+        firstName,
+        lastName,
+        phone,
+        email,
+        clientType,
+        budget: clientType === 'buyer' ? budget : null,
+        location: clientType === 'buyer' ? location : null,
+        amenities: clientType === 'buyer' ? amenities : null,
+        property_images: clientType === 'seller' ? propertyImages : null,
+        notes: clientType === 'seller' ? notes : null,
+      };
+
+      const response = await fetch(`https://realtoriqbackend.onrender.com/api/form/${realtorId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://realtoriq.onrender.com'
+        },
+        mode: 'cors',
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Success:', result);
+        setSubmitted(true);
+        alert('Form submitted successfully!');
+      } else {
+        const errorData = await response.json().catch(() => null);
+        console.error('Server error:', errorData);
+        throw new Error(errorData?.message || 'Form submission failed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error submitting form. Please try again.');
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    const promises = files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    });
+    const base64Images = await Promise.all(promises);
+    setPropertyImages([...propertyImages, ...base64Images]);
+  };
+
+  console.log('Current realtorId:', realtorId);
+
+  if (submitted) {
+    return (
+      <div className="form-page-container dark-mode">
+        <h2>Thank you!</h2>
+        <p>Your information has been submitted.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="form-container">
+      <h1>Contact Form</h1>
+      {!realtorId && <p style={{color: 'red'}}>Warning: No realtor ID found!</p>}
+      <form onSubmit={handleFormSubmit} className="client-form">
+        <div className="form-group">
+          <label>First Name *</label>
+          <input
+            required
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            type="text"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Last Name *</label>
+          <input
+            required
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            type="text"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Phone *</label>
+          <input
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            type="text"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Email *</label>
+          <input
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Are you buying or selling?</label>
+          <select value={clientType} onChange={(e) => setClientType(e.target.value)}>
+            <option value="buyer">Buyer</option>
+            <option value="seller">Seller</option>
+          </select>
+        </div>
+
+        {clientType === 'buyer' && (
+          <>
+            <div className="form-group">
+              <label>Budget</label>
+              <input
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                type="number"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Location</label>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                type="text"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Amenities</label>
+              <textarea
+                value={amenities}
+                onChange={(e) => setAmenities(e.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        {clientType === 'seller' && (
+          <>
+            <div className="form-group">
+              <label>Property Images (Max size: X MB each)</label>
+              <input type="file" multiple onChange={handleFileChange} />
+            </div>
+
+            <div className="form-group">
+              <label>Property Description / Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. House details, special features, etc."
+              />
+            </div>
+          </>
+        )}
+
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  );
+}
+
+export default FormPage;
+"
+
+
 Home:
+AiChat.jsx:
+"
+import React from 'react';
+import '../../styles/Home/AiChat.css';
+
+const AiChat = () => {
+  return (
+    <section className="ai-chat">
+      <div className="container">
+        <h3>Talk to our AI Agent</h3>
+        <button>Start Chat</button>
+      </div>
+    </section>
+  );
+};
+
+export default AiChat;
+"
+
 FeaturedProperties.jsx:
 "
 import React, { useState, useEffect } from 'react';
@@ -1179,43 +1559,70 @@ export default FeaturedProperties;
 Footer.jsx:
 "
 import React from 'react';
+import { Link } from 'react-router-dom';
 import '../../styles/Home/Footer.css';
-
 
 const Footer = () => {
   return (
     <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-section footer-logo">
-          <h2>AI Realtor</h2>
-        </div>
-
-        <div className="footer-section footer-links">
+      <div className="footer-content">
+        {/* Company Section */}
+        <div className="footer-section">
+          <h3>Company</h3>
           <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Buy</a></li>
-            <li><a href="#">Sell</a></li>
-            <li><a href="#">About Us</a></li>
+            <li><Link to="/about">About Us</Link></li>
+            <li><Link to="/features">Features</Link></li>
+            <li><Link to="/pricing">Pricing</Link></li>
           </ul>
         </div>
 
-        <div className="footer-section footer-contact">
-          <h4>Contact Us</h4>
-          <form className="contact-form">
-            <div className="contact-left">
-              <input type="email" placeholder="Email *" required />
-              <input type="text" placeholder="Phone *" required />
-              <button type="submit">Contact</button>
-            </div>
-            <div className="contact-right">
-              <textarea placeholder="Type your message here" required></textarea>
-            </div>
-          </form>
+        {/* Support Section */}
+        <div className="footer-section">
+          <h3>Support</h3>
+          <ul>
+            <li><Link to="/contact">Contact Us</Link></li>
+            <li><Link to="/faq">Faq</Link></li>
+          </ul>
+        </div>
+
+        {/* Resources Section */}
+        <div className="footer-section">
+          <h3>Resources</h3>
+          <ul>
+            <li><Link to="/testimonials">Testimonials</Link></li>
+            <li><Link to="/benefits">Benefits For Realtors</Link></li>
+          </ul>
+        </div>
+
+        {/* Newsletter Section */}
+        <div className="footer-section newsletter">
+          <h3>Stay Updated</h3>
+          <p>Subscribe to our newsletter for the latest updates and insights from RealtorIQ.</p>
+          <div className="newsletter-form">
+            <input type="email" placeholder="Enter your email" />
+            <button type="submit">Subscribe</button>
+          </div>
         </div>
       </div>
 
+      {/* Bottom Bar */}
       <div className="footer-bottom">
-        <p>&copy; 2024 AI Realtor. All rights reserved.</p>
+        <p>© 2025 RealtorIQ. All rights reserved.</p>
+        <div className="footer-links">
+          <Link to="/terms">Terms & Conditions</Link>
+          <Link to="/privacy">Privacy Policy</Link>
+        </div>
+        <div className="social-links">
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-facebook"></i>
+          </a>
+          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-linkedin"></i>
+          </a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-twitter"></i>
+          </a>
+        </div>
       </div>
     </footer>
   );
@@ -1316,23 +1723,24 @@ export default Hero;
 HomeApp.jsx:
 "
 import React from 'react';
-import Header from './Header';
+import Navbar from '../Navbar';
 import Hero from './Hero';
 import FeaturedProperties from './FeaturedProperties';
 import Services from './Services';
+import AiChat from './AiChat';
 import RealEstateTrends from './RealEstateTrends';
-import Footer from './Footer';
-import '../../styles/Home/global.css';
+// Removed ContactUs import temporarily
 
-const HomeApp = ({ user, onLogout }) => {
+const HomeApp = () => {
   return (
     <div>
-      <Header user={user} onLogout={onLogout} />
+      <Navbar />
       <Hero />
       <FeaturedProperties />
       <Services />
+      <AiChat />
       <RealEstateTrends />
-      <Footer />
+      {/* Removed ContactUs component temporarily */}
     </div>
   );
 };
@@ -1421,6 +1829,30 @@ export default Services;
 "
 
 
+MainPage:
+MainPage.jsx:
+"
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import RealtorApp from '../Realtor/RealtorApp';
+import '../../styles/MainPage/MainPage.css';
+
+function MainPage({ user, onLogout }) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/realtor');
+    }
+  }, [user, navigate]);
+
+  return <RealtorApp user={user} onLogout={onLogout} />;
+}
+
+export default MainPage;
+"
+
+
 Realtor:
 AiChat.jsx:
 "
@@ -1428,17 +1860,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../../styles/Realtor/AiChat.css';
 
 const AiChat = () => {
-  const [showChat, setShowChat] = useState(false); // State for chat visibility
+  const [showChat, setShowChat] = useState(false);
   const landbotInstanceRef = useRef(null);
 
   useEffect(() => {
     if (!landbotInstanceRef.current && showChat) {
       const loadLandbot = () => {
-        landbotInstanceRef.current = new window.Landbot.Container({
-          container: '#myLandbot',
-          configUrl:
-            'https://storage.googleapis.com/landbot.online/v3/H-2677681-SQEQ6FI3JEY1LKYE/index.json',
-        });
+        try {
+          landbotInstanceRef.current = new window.Landbot.Container({
+            container: '#myLandbot',
+            configUrl: 'https://storage.googleapis.com/landbot.online/v3/H-2677681-SQEQ6FI3JEY1LKYE/index.json',
+          });
+        } catch (error) {
+          console.error('Error initializing Landbot:', error);
+        }
       };
 
       if (window.Landbot) {
@@ -1453,23 +1888,41 @@ const AiChat = () => {
     }
   }, [showChat]);
 
-  const handleClick = () => {
-    setShowChat(true); // Show chat
+  const handleClose = () => {
+    try {
+      // Simply remove the container's content and reset the ref
+      const container = document.getElementById('myLandbot');
+      if (container) {
+        container.innerHTML = '';
+      }
+      landbotInstanceRef.current = null;
+      setShowChat(false);
+    } catch (error) {
+      console.error('Error closing chat:', error);
+      // Ensure the state is updated even if there's an error
+      setShowChat(false);
+    }
   };
 
   return (
-    <section className="ai-chat">
-      <div className="container">
-        {!showChat && (
-          <>
-            <h3>Talk to our AI Agent</h3>
-            <button onClick={handleClick}>Start Chat</button>
-          </>
-        )}
-        {showChat && (
-          <div id="myLandbot"></div>
-        )}
-      </div>
+    <section className={`ai-chat-section ${showChat ? 'expanded' : ''}`}>
+      {showChat && (
+        <button 
+          className="close-chat-button" 
+          onClick={handleClose}
+          aria-label="Close chat"
+        >
+          ×
+        </button>
+      )}
+      {!showChat ? (
+        <div className="ai-chat-initial">
+          <h3>Talk to our AI Agent</h3>
+          <button onClick={() => setShowChat(true)}>Start Chat</button>
+        </div>
+      ) : (
+        <div id="myLandbot" className="landbot-container"></div>
+      )}
     </section>
   );
 };
@@ -1518,91 +1971,268 @@ const Carousel = () => {
 export default Carousel;
 "
 
+ClientCard.jsx:
+"
+import React from 'react';
+import '../../styles/Realtor/ClientCard.css';
+
+const ClientCard = ({ client, onSelect, onPinToggle }) => {
+  return (
+    <div className="client-card">
+      <div className="client-header">
+        <strong>
+          {client.first_name} {client.last_name}
+        </strong>
+        <button
+          className="pin-button"
+          onClick={() => onPinToggle(client.id, client.pinned)}
+        >
+          {client.pinned ? 'Unpin' : 'Pin'}
+        </button>
+      </div>
+      <div onClick={() => onSelect(client)} className="client-body">
+        <p>{client.client_type === 'seller' ? 'Seller' : 'Buyer'}</p>
+        <p>Created: {new Date(client.created_at).toLocaleString()}</p>
+      </div>
+    </div>
+  );
+};
+
+export default ClientCard; 
+"
+
+ClientDetails.jsx:
+"
+import React from 'react';
+import '../../styles/Realtor/ClientDetails.css';
+
+const ClientDetails = ({ client, onClose }) => {
+  return (
+    <div className="client-detail">
+      <h4>
+        {client.first_name} {client.last_name} ({client.client_type})
+      </h4>
+      <p>Phone: {client.phone}</p>
+      <p>Email: {client.email}</p>
+      {client.client_type === 'seller' && (
+        <>
+          <p>Notes: {client.notes}</p>
+          {client.property_images && client.property_images.length > 0 && (
+            <div className="property-images">
+              {client.property_images.map((url, idx) => (
+                <img src={url} alt={`property-${idx}`} key={idx} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {client.client_type === 'buyer' && (
+        <>
+          <p>Budget: {client.budget}</p>
+          <p>Location: {client.location}</p>
+          <p>Amenities: {client.amenities}</p>
+        </>
+      )}
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+};
+
+export default ClientDetails; 
+"
+
+FormLinkGenerator.jsx:
+"
+import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import '../../styles/Realtor/FormLinkGenerator.css';
+
+const FormLinkGenerator = ({ user }) => {
+  const [linkGenerated, setLinkGenerated] = useState(false);
+  const [isShareDrawerOpen, setShareDrawerOpen] = useState(false);
+  const formLink = `${window.location.origin}/form/${user?.id}`;
+
+  const handleGenerateLink = () => {
+    setLinkGenerated(true);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(formLink);
+    alert('Link copied to clipboard');
+  };
+
+  const toggleShareDrawer = () => {
+    setShareDrawerOpen(!isShareDrawerOpen);
+  };
+
+  return (
+    <div className="form-link-generator">
+      {!linkGenerated ? (
+        <button className="generate-link-btn" onClick={handleGenerateLink}>
+          Generate Client Form Link
+        </button>
+      ) : (
+        <div className="generated-link-content">
+          <div className="link-qr-container">
+            <div className="link-section">
+              <h3>Share Your Client Form</h3>
+              <div className="link-display">
+                <input type="text" value={formLink} readOnly />
+                <div className="link-actions">
+                  <button className="copy-btn" onClick={handleCopyLink}>
+                    Copy Link
+                  </button>
+                  <button className="share-btn" onClick={toggleShareDrawer}>
+                    Share
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="qr-section">
+              <QRCodeSVG value={formLink} size={128} />
+              <p>Scan QR Code</p>
+            </div>
+          </div>
+
+          {isShareDrawerOpen && (
+            <div className="share-drawer">
+              <button className="share-option">
+                <i className="fas fa-comment"></i>
+                Messages
+              </button>
+              <button className="share-option">
+                <i className="fab fa-whatsapp"></i>
+                WhatsApp
+              </button>
+              <button className="share-option">
+                <i className="fas fa-envelope"></i>
+                Email
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FormLinkGenerator; 
+"
+
 GeneratedLeads.jsx:
 "
 import React, { useState, useEffect } from 'react';
 import '../../styles/Realtor/GeneratedLeads.css';
 
 const GeneratedLeads = () => {
-  const [sellerLeadData, setSellerData] = useState({
-    LeadName: "",
-    Contact: "",
-    Email: "",
-    AskingPrice: "",
+  const [leads, setLeads] = useState({
+    sellers: [],
+    buyers: []
   });
-  const [buyerLeadData, setBuyerData] = useState(null); // Placeholder for buyer leads
 
-  const getDataFromZap = async () => {
+  const getLeads = async () => {
     try {
-      const response = await fetch("https://realtortempaibackend.onrender.com/getSellerData", {
+      const response = await fetch("https://realtoriqbackend.onrender.com/api/clients", {
         credentials: 'include',
-      });
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401) {
-          console.error("User not authenticated. Redirect to login.");
-          // Redirect or notify the user
+        headers: {
+          'Accept': 'application/json',
         }
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-  
-      const data = await response.json();
-  
-      setSellerData({
-        LeadName: data.LeadName || "",
-        Contact: data.Contact || "",
-        Email: data.LeadEmail || "",
-        AskingPrice: data.AskingPrice || "",
       });
+
+      if (response.ok) {
+        const clients = await response.json();
+        console.log('Fetched clients:', clients); // Debug log
+        
+        // Group clients by type
+        setLeads({
+          sellers: clients.filter(client => client.client_type === 'seller'),
+          buyers: clients.filter(client => client.client_type === 'buyer')
+        });
+      } else {
+        console.error('Failed to fetch leads:', await response.text());
+      }
     } catch (error) {
-      console.error("Error fetching data: ", error);
+      console.error("Error fetching leads:", error);
     }
   };
-  
 
   useEffect(() => {
-    getDataFromZap(); 
-    const intervalId = setInterval(getDataFromZap, 5000);
+    getLeads();
+    // Fetch every 30 seconds
+    const intervalId = setInterval(getLeads, 30000);
     return () => clearInterval(intervalId);
   }, []);
 
-  const userName = 'Jaydeep';
+  const LeadCard = ({ client }) => (
+    <div className="lead-card">
+      <div className="lead-header">
+        <h4>{client.first_name} {client.last_name}</h4>
+        <div className="lead-contact">
+          <p><i className="fas fa-phone"></i> {client.phone}</p>
+          <p><i className="fas fa-envelope"></i> {client.email}</p>
+        </div>
+      </div>
+      <div className="lead-details">
+        {client.client_type === 'buyer' ? (
+          <>
+            <p><strong>Budget:</strong> ${client.budget}</p>
+            <p><strong>Location:</strong> {client.location}</p>
+            <p><strong>Amenities:</strong> {client.amenities}</p>
+          </>
+        ) : (
+          <>
+            <p><strong>Notes:</strong> {client.notes}</p>
+            {client.property_images && (
+              <div className="property-images">
+                {client.property_images.map((url, idx) => (
+                  <img key={idx} src={url} alt={`Property ${idx + 1}`} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <section className="generated-leads">
-      <h1 className="leads-header">Generated Leads</h1>
-      <div className="leads-container">
-        <div className="leads-section seller-leads">
-          <h2>Seller Leads</h2>
-          {sellerLeadData.LeadName ? (
-            <div className="lead-card">
-              <div className="lead-info">
-                <p><strong>Full Name:</strong> {sellerLeadData.LeadName}</p>
-                <p><strong>Contact Number:</strong> {sellerLeadData.Contact}</p>
-                <p><strong>Email:</strong> {sellerLeadData.Email}</p>
-                <p><strong>Selling Price:</strong> $ {sellerLeadData.AskingPrice}</p>
-              </div>
-            </div>
-          ) : (
-            <p>No seller leads available</p>
-          )}
+      <div className="leads-header">
+        <h2>Client Leads</h2>
+        <p>All your client inquiries in one place</p>
+      </div>
+
+      <div className="leads-grid">
+        <div className="leads-column">
+          <div className="leads-section-header">
+            <h3>Seller Clients</h3>
+            <span className="lead-count">{leads.sellers.length} clients</span>
+          </div>
+          <div className="leads-list">
+            {leads.sellers.length > 0 ? (
+              leads.sellers.map((client) => (
+                <LeadCard key={client.id} client={client} />
+              ))
+            ) : (
+              <div className="no-leads">No seller clients yet</div>
+            )}
+          </div>
         </div>
-        
-        <div className="leads-section buyer-leads">
-          <h2>Buyer Leads</h2>
-          {buyerLeadData ? (
-            <div className="lead-card">
-              <div className="lead-info">
-                <p><strong>Full Name:</strong> {buyerLeadData.LeadName}</p>
-                <p><strong>Contact Number:</strong> {buyerLeadData.Contact}</p>
-                <p><strong>Email:</strong> {buyerLeadData.Email}</p>
-                <p><strong>Budget:</strong> $ {buyerLeadData.Budget}</p>
-              </div>
-            </div>
-          ) : (
-            <p>No buyer leads available</p>
-          )}
+
+        <div className="leads-column">
+          <div className="leads-section-header">
+            <h3>Buyer Clients</h3>
+            <span className="lead-count">{leads.buyers.length} clients</span>
+          </div>
+          <div className="leads-list">
+            {leads.buyers.length > 0 ? (
+              leads.buyers.map((client) => (
+                <LeadCard key={client.id} client={client} />
+              ))
+            ) : (
+              <div className="no-leads">No buyer clients yet</div>
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -1741,27 +2371,112 @@ export default PerformanceOverview;
 
 RealtorApp.jsx:
 "
-import React from 'react';
-import '../../styles/Realtor/global.css';
-import Header from './Header';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import Navbar from '../Navbar';
+import ClientCard from './ClientCard';
+import ClientDetails from './ClientDetails';
+import FormLinkGenerator from './FormLinkGenerator';
 import PerformanceOverview from './PerformanceOverview';
 import GeneratedLeads from './GeneratedLeads';
 import RealtorProfileHeader from './RealtorProfileHeader';
 import Footer from '../Home/Footer';
 import Carousel from './Carousel';
 import AiChat from './AiChat';
+import '../../styles/Realtor/RealtorApp.css';
 
 function RealtorApp({ user, onLogout }) {
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [generatedLink, setGeneratedLink] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+    fetchClients();
+    setGeneratedLink(`${window.location.origin}/form/${user.id}`);
+  }, [user, navigate]);
+
+  const fetchClients = async () => {
+    try {
+      const res = await axios.get('/api/clients');
+      setClients(res.data);
+    } catch (err) {
+      console.error('Error fetching clients:', err);
+    }
+  };
+
+  const handlePinToggle = async (clientId, pinned) => {
+    try {
+      await axios.put(`/api/clients/${clientId}/pin`, { pinned: !pinned });
+      fetchClients();
+    } catch (err) {
+      console.error('Error pinning/unpinning client:', err);
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    try {
+      const res = await axios.post('/generate-link');
+      if (res.data && res.data.link) {
+        setGeneratedLink(res.data.link);
+      }
+    } catch (error) {
+      console.error('Error generating link:', error);
+    }
+  };
+
   return (
-    <div className="App">
-      <Header user={user} onLogout={onLogout} />
-      <RealtorProfileHeader user={user} />
-      <PerformanceOverview />
-      <GeneratedLeads />
-      <div className="ai-chat-container">
-        <AiChat />
+    <div className="realtor-app-container dark-mode">
+      <Navbar 
+        user={user} 
+        onLogout={onLogout}
+      />
+      
+      <div className="dashboard-content">
+        <RealtorProfileHeader user={user} />
+
+        <div className="client-form-section">
+          <h2>Your Client Form</h2>
+          <p>Share this link or QR code with your clients</p>
+          <FormLinkGenerator 
+            generatedLink={generatedLink}
+            onGenerateLink={handleGenerateLink}
+          />
+        </div>
+
+        <div className="clients-section">
+          <h3>Clients</h3>
+          <div className="clients-grid">
+            {clients.map((client) => (
+              <ClientCard
+                key={client.id}
+                client={client}
+                onSelect={setSelectedClient}
+                onPinToggle={handlePinToggle}
+              />
+            ))}
+          </div>
+
+          {selectedClient && (
+            <ClientDetails 
+              client={selectedClient}
+              onClose={() => setSelectedClient(null)}
+            />
+          )}
+        </div>
+
+        <PerformanceOverview />
+        <GeneratedLeads />
+        <div className="ai-chat-container">
+          <AiChat />
+        </div>
+        <Carousel />
       </div>
-      <Carousel />
       <Footer />
     </div>
   );
@@ -1772,54 +2487,10 @@ export default RealtorApp;
 
 RealtorProfileHeader.jsx:
 "
-import React, { useState } from 'react';
-import axios from 'axios';
+import React from 'react';
 import '../../styles/Realtor/RealtorProfileHeader.css';
 
 const RealtorProfileHeader = ({ user }) => {
-  const [linkGenerated, setLinkGenerated] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [isShareDrawerOpen, setShareDrawerOpen] = useState(false);
-
-  const handleGenerateLink = async () => {
-    try {
-      // Reset link state before generating a new one
-      setGeneratedLink('');
-      setLinkGenerated(false);
-  
-      const response = await axios.post('/generate-link', {
-        realtorId: user.id,
-      });
-  
-      const data = response.data;
-      console.log('Response from backend:', data);
-  
-      if (data.link) {
-        setGeneratedLink(data.link);
-        setLinkGenerated(true);
-      } else {
-        console.error('Error: No link returned from backend');
-        // Set the default link
-        setGeneratedLink('https://form-interface-ee593b.zapier.app/');
-        setLinkGenerated(true);
-      }
-    } catch (error) {
-      console.error('Error generating link:', error);
-      // Set the default link in case of error
-      setGeneratedLink('https://form-interface-ee593b.zapier.app/');
-      setLinkGenerated(true);
-    }
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(generatedLink);
-    alert('Link copied to clipboard');
-  };
-
-  const toggleShareDrawer = () => {
-    setShareDrawerOpen(!isShareDrawerOpen);
-  };
-
   return (
     <section className="realtor-profile-header">
       <div className="profile-info">
@@ -1832,37 +2503,102 @@ const RealtorProfileHeader = ({ user }) => {
           <p>Welcome to your Realtor Dashboard</p>
         </div>
       </div>
-
-      <div className="profile-actions">
-        {linkGenerated ? (
-          <div className="generated-link-box">
-            <span className="generated-link">{generatedLink}</span>
-            <button className="copy-link" onClick={handleCopyLink}>
-              Copy Link
-            </button>
-            <button className="share-link" onClick={toggleShareDrawer}>
-              Share
-            </button>
-          </div>
-        ) : (
-          <button className="generate-link" onClick={handleGenerateLink}>
-            Generate Link
-          </button>
-        )}
-
-        {isShareDrawerOpen && (
-          <div className="share-drawer">
-            <button className="share-option">Messages</button>
-            <button className="share-option">WhatsApp</button>
-            <button className="share-option">Email</button>
-          </div>
-        )}
-      </div>
     </section>
   );
 };
 
 export default RealtorProfileHeader;
+"
+
+
+Settings:
+SettingsPage.jsx:
+"
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import '../../styles/Realtor/global.css';
+import '../../styles/Settings/SettingsPage.css';
+
+function SettingsPage({ user, setUser }) {
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+
+  // fetch the latest user data in case it changed
+  useEffect(() => {
+    setFirstName(user?.firstName || '');
+    setLastName(user?.lastName || '');
+    setEmail(user?.email || '');
+    setPhoneNumber(user?.phoneNumber || '');
+  }, [user]);
+
+  const handleSave = async () => {
+    try {
+      const response = await axios.put('/api/realtor/settings', {
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+        password: password.trim() === '' ? undefined : password,
+      });
+      console.log('Settings updated:', response.data);
+      // update front end user
+      if (response.data.user) {
+        setUser((prev) => ({
+          ...prev,
+          ...response.data.user
+        }));
+        alert('Settings saved!');
+      }
+    } catch (error) {
+      console.error('Error updating settings:', error.response?.data || error.message);
+      alert(error.response?.data?.error || 'Failed to update settings');
+    }
+  };
+
+  return (
+    <div className="settings-page dark-mode">
+      <h2>Settings</h2>
+      <div className="settings-form">
+        <label>First Name</label>
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          type="text"
+        />
+
+        <label>Last Name</label>
+        <input value={lastName} onChange={(e) => setLastName(e.target.value)} type="text" />
+
+        <label>Email</label>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+
+        <label>Phone Number</label>
+        <input
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          type="text"
+        />
+
+        {/* If user was created via Google OAuth, the backend won't allow password changes. */}
+        <label>Password (Only for local accounts)</label>
+        <input
+          placeholder="Enter new password (optional)"
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+        />
+
+        <button onClick={handleSave} className="save-button">
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default SettingsPage;
 "
 
 

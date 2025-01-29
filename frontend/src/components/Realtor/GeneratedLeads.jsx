@@ -7,35 +7,35 @@ const GeneratedLeads = () => {
     buyers: []
   });
 
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
   const getLeads = async () => {
     try {
-      const response = await fetch("https://realtoriqbackend.onrender.com/api/clients", {
+      const response = await fetch(`${backendUrl}/api/clients`, {
         credentials: 'include',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json'
         }
       });
 
       if (response.ok) {
         const clients = await response.json();
-        console.log('Fetched clients:', clients); // Debug log
-        
         // Group clients by type
         setLeads({
-          sellers: clients.filter(client => client.client_type === 'seller'),
-          buyers: clients.filter(client => client.client_type === 'buyer')
+          sellers: clients.filter((client) => client.client_type === 'seller'),
+          buyers: clients.filter((client) => client.client_type === 'buyer')
         });
       } else {
         console.error('Failed to fetch leads:', await response.text());
       }
     } catch (error) {
-      console.error("Error fetching leads:", error);
+      console.error('Error fetching leads:', error);
     }
   };
 
   useEffect(() => {
     getLeads();
-    // Fetch every 30 seconds
+    // Optionally fetch every 30 seconds
     const intervalId = setInterval(getLeads, 30000);
     return () => clearInterval(intervalId);
   }, []);
@@ -43,22 +43,36 @@ const GeneratedLeads = () => {
   const LeadCard = ({ client }) => (
     <div className="lead-card">
       <div className="lead-header">
-        <h4>{client.first_name} {client.last_name}</h4>
+        <h4>
+          {client.first_name} {client.last_name}
+        </h4>
         <div className="lead-contact">
-          <p><i className="fas fa-phone"></i> {client.phone}</p>
-          <p><i className="fas fa-envelope"></i> {client.email}</p>
+          <p>
+            <i className="fas fa-phone"></i> {client.phone}
+          </p>
+          <p>
+            <i className="fas fa-envelope"></i> {client.email}
+          </p>
         </div>
       </div>
       <div className="lead-details">
         {client.client_type === 'buyer' ? (
           <>
-            <p><strong>Budget:</strong> ${client.budget}</p>
-            <p><strong>Location:</strong> {client.location}</p>
-            <p><strong>Amenities:</strong> {client.amenities}</p>
+            <p>
+              <strong>Budget:</strong> ${client.budget}
+            </p>
+            <p>
+              <strong>Location:</strong> {client.location}
+            </p>
+            <p>
+              <strong>Amenities:</strong> {client.amenities}
+            </p>
           </>
         ) : (
           <>
-            <p><strong>Notes:</strong> {client.notes}</p>
+            <p>
+              <strong>Notes:</strong> {client.notes}
+            </p>
             {client.property_images && (
               <div className="property-images">
                 {client.property_images.map((url, idx) => (
@@ -87,9 +101,7 @@ const GeneratedLeads = () => {
           </div>
           <div className="leads-list">
             {leads.sellers.length > 0 ? (
-              leads.sellers.map((client) => (
-                <LeadCard key={client.id} client={client} />
-              ))
+              leads.sellers.map((client) => <LeadCard key={client.id} client={client} />)
             ) : (
               <div className="no-leads">No seller clients yet</div>
             )}
@@ -103,9 +115,7 @@ const GeneratedLeads = () => {
           </div>
           <div className="leads-list">
             {leads.buyers.length > 0 ? (
-              leads.buyers.map((client) => (
-                <LeadCard key={client.id} client={client} />
-              ))
+              leads.buyers.map((client) => <LeadCard key={client.id} client={client} />)
             ) : (
               <div className="no-leads">No buyer clients yet</div>
             )}

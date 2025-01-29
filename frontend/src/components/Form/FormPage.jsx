@@ -16,9 +16,11 @@ function FormPage() {
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  const frontendUrl = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000';
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       if (!realtorId) {
         throw new Error('Realtor ID is missing');
@@ -34,28 +36,28 @@ function FormPage() {
         location: clientType === 'buyer' ? location : null,
         amenities: clientType === 'buyer' ? amenities : null,
         property_images: clientType === 'seller' ? propertyImages : null,
-        notes: clientType === 'seller' ? notes : null,
+        notes: clientType === 'seller' ? notes : null
       };
 
-      const response = await fetch(`https://realtoriqbackend.onrender.com/api/form/${realtorId}`, {
+      const response = await fetch(`${backendUrl}/api/form/${realtorId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': 'https://realtoriq.onrender.com'
+          // 'Origin' header is generally set automatically by the browser;
+          // including it manually is optional, but if you do:
+          // 'Origin': frontendUrl
         },
         mode: 'cors',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log('Success:', result);
+        await response.json();
         setSubmitted(true);
         alert('Form submitted successfully!');
       } else {
         const errorData = await response.json().catch(() => null);
-        console.error('Server error:', errorData);
         throw new Error(errorData?.message || 'Form submission failed');
       }
     } catch (error) {
@@ -78,8 +80,6 @@ function FormPage() {
     setPropertyImages([...propertyImages, ...base64Images]);
   };
 
-  console.log('Current realtorId:', realtorId);
-
   if (submitted) {
     return (
       <div className="form-page-container dark-mode">
@@ -92,7 +92,9 @@ function FormPage() {
   return (
     <div className="form-container">
       <h1>Contact Form</h1>
-      {!realtorId && <p style={{color: 'red'}}>Warning: No realtor ID found!</p>}
+      {!realtorId && (
+        <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>
+      )}
       <form onSubmit={handleFormSubmit} className="client-form">
         <div className="form-group">
           <label>First Name *</label>
@@ -175,7 +177,7 @@ function FormPage() {
         {clientType === 'seller' && (
           <>
             <div className="form-group">
-              <label>Property Images (Max size: X MB each)</label>
+              <label>Property Images</label>
               <input type="file" multiple onChange={handleFileChange} />
             </div>
 
@@ -184,7 +186,6 @@ function FormPage() {
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. House details, special features, etc."
               />
             </div>
           </>

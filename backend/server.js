@@ -14,24 +14,19 @@ const helmet = require('helmet');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 
-// First declare environment variables
-const FRONTEND_URL =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://realtoriq.onrender.com';
+// Pick the URLs from the environment or default to localhost if dev
+const isProd = (process.env.NODE_ENV === 'production');
 
-const BACKEND_URL =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:5000'
-    : 'https://realtoriqbackend.onrender.com';
+const FRONTEND_URL = isProd
+  ? process.env.FRONTEND_URL || 'https://realtoriq.onrender.com'
+  : 'http://localhost:3000';
 
-// Force development mode if needed
-if (process.env.NODE_ENV !== 'production') {
-  process.env.NODE_ENV = 'development';
-}
+const BACKEND_URL = isProd
+  ? process.env.BACKEND_URL || 'https://realtoriqbackend.onrender.com'
+  : 'http://localhost:5000';
 
 // Log environment info
-console.log('Current environment:', process.env.NODE_ENV);
+console.log('Current NODE_ENV:', process.env.NODE_ENV);
 console.log('Frontend URL:', FRONTEND_URL);
 console.log('Backend URL:', BACKEND_URL);
 
@@ -42,26 +37,28 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(express.json());
 app.set('trust proxy', 1); // trust first proxy
+
+// Rate limit (basic example)
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100,
+  max: 100
 });
 app.use(limiter);
 
 // Update CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://realtoriq.onrender.com' 
-    : 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Origin', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Origin', 'Authorization']
+  })
+);
 
-// Add a specific CORS configuration for the form endpoint
-app.options('/api/form/:realtorId', cors()); // Enable pre-flight for this specific route
+// For any preflight requests on form route
+app.options('/api/form/:realtorId', cors());
 
-// Database pool configuration - Always use production database
+// Database Pool Configuration
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -69,56 +66,54 @@ const pool = new Pool({
   }
 });
 
-// Add better error logging
 pool.on('error', (err) => {
   console.error('Database connection error:', err);
   console.error('Using DATABASE_URL:', process.env.DATABASE_URL);
 });
 
-// Add a test connection on startup
+// Test database connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Error testing database connection:', err);
   } else {
-    console.log('Database connected successfully');
+    console.log('Database connected successfully at', res.rows[0].now);
   }
 });
 
 // Session config
 const sessionConfig = {
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'someSecret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd,
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  proxy: true // Add this for secure cookies behind a proxy
+  proxy: true
 };
 
-if (process.env.NODE_ENV === 'production') {
+if (isProd && process.env.REDIS_URL) {
   const redisClient = redis.createClient({
-    url: process.env.REDIS_URL,
+    url: process.env.REDIS_URL
   });
   redisClient.connect().catch(console.error);
   redisClient.on('connect', () => console.log('Connected to Redis successfully.'));
   redisClient.on('error', (err) => console.error('Redis connection error:', err));
+
+  // Use Redis store in production
+  sessionConfig.store = new RedisStore({ client: redisClient });
 }
 
 app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ============================
-// Database helper functions
-// ============================
+// Database Helper Functions
 async function findRealtorByGoogleId(googleId) {
   try {
-    console.log('Looking for realtor with Google ID:', googleId);
     const result = await pool.query('SELECT * FROM realtors WHERE google_id = $1', [googleId]);
-    console.log('Query result:', result.rows);
     return result.rows[0];
   } catch (error) {
     console.error('Error in findRealtorByGoogleId:', error);
@@ -128,15 +123,15 @@ async function findRealtorByGoogleId(googleId) {
 
 async function createRealtor(userData) {
   try {
-    console.log('Creating new realtor:', userData);
     const { googleId, firstName, lastName, email, phoneNumber } = userData;
     const result = await pool.query(
-      `INSERT INTO realtors (google_id, first_name, last_name, email, phone_number, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      `INSERT INTO realtors 
+         (google_id, first_name, last_name, email, phone_number, created_at, updated_at)
+       VALUES 
+         ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
       [googleId, firstName, lastName, email, phoneNumber]
     );
-    console.log('Created realtor:', result.rows[0]);
     return result.rows[0];
   } catch (error) {
     console.error('Error in createRealtor:', error);
@@ -149,22 +144,18 @@ async function findRealtorById(id) {
   return result.rows[0];
 }
 
-// ============================
 // Passport Strategies
-// ============================
-
-// Google OAuth strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${BACKEND_URL}/auth/google/callback`,
+      callbackURL: `${BACKEND_URL}/auth/google/callback`
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         let realtor = await findRealtorByGoogleId(profile.id);
-        if (!realtor) {        
+        if (!realtor) {
           realtor = await createRealtor({
             googleId: profile.id,
             firstName: profile.name.givenName,
@@ -181,7 +172,6 @@ passport.use(
   )
 );
 
-// Local strategy
 passport.use(
   new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
     try {
@@ -206,13 +196,11 @@ passport.use(
 
 // Serialize / Deserialize
 passport.serializeUser((user, done) => {
-  console.log('Serializing user:', user);
   done(null, user.id);
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
-    console.log('Deserializing user id:', id);
     const result = await pool.query('SELECT * FROM realtors WHERE id = $1', [id]);
     const user = result.rows[0];
     if (user) {
@@ -230,9 +218,7 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// ============================
 // Authentication Routes
-// ============================
 app.post(
   '/auth/register',
   [
@@ -240,7 +226,7 @@ app.post(
     body('lastName').isString(),
     body('email').isEmail(),
     body('password').isLength({ min: 6 }),
-    body('phoneNumber').optional().isMobilePhone(),
+    body('phoneNumber').optional().isMobilePhone()
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -278,8 +264,8 @@ app.post(
             email: newRealtor.email,
             firstName: newRealtor.first_name,
             lastName: newRealtor.last_name,
-            displayName: `${newRealtor.first_name} ${newRealtor.last_name}`,
-          },
+            displayName: `${newRealtor.first_name} ${newRealtor.last_name}`
+          }
         });
       });
     } catch (error) {
@@ -289,7 +275,7 @@ app.post(
   }
 );
 
-app.post('/auth/login', [body('email').isEmail(), body('password').exists()], 
+app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
   (req, res, next) => {
     passport.authenticate('local', (err, realtor, info) => {
       if (err) {
@@ -304,7 +290,6 @@ app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
           console.error('Session error:', err);
           return next(err);
         }
-        console.log('Login successful, session:', req.session);
         res.json({
           message: 'Login successful',
           user: {
@@ -312,8 +297,8 @@ app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
             email: realtor.email,
             firstName: realtor.first_name,
             lastName: realtor.last_name,
-            displayName: `${realtor.first_name} ${realtor.last_name}`,
-          },
+            displayName: `${realtor.first_name} ${realtor.last_name}`
+          }
         });
       });
     })(req, res, next);
@@ -323,7 +308,7 @@ app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
 app.get(
   '/auth/google',
   passport.authenticate('google', {
-    scope: ['profile', 'email'],
+    scope: ['profile', 'email']
   })
 );
 
@@ -331,21 +316,18 @@ app.get(
   '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect(`${FRONTEND_URL}/main`); // after Google login, go to main page
+    // Redirect to frontend after successful Google login
+    res.redirect(`${FRONTEND_URL}/main`);
   }
 );
 
-// Add a route to check authentication status
 app.get('/auth/status', (req, res) => {
-  console.log('Session:', req.session);
-  console.log('User:', req.user);
   res.json({
     authenticated: req.isAuthenticated(),
     user: req.user
   });
 });
 
-// Check auth
 app.get('/auth/user', (req, res) => {
   if (req.isAuthenticated() && req.user) {
     const userData = {
@@ -354,8 +336,8 @@ app.get('/auth/user', (req, res) => {
         email: req.user.email,
         firstName: req.user.firstName,
         lastName: req.user.lastName,
-        displayName: `${req.user.firstName} ${req.user.lastName}`,
-      },
+        displayName: `${req.user.firstName} ${req.user.lastName}`
+      }
     };
     res.json(userData);
   } else {
@@ -363,7 +345,6 @@ app.get('/auth/user', (req, res) => {
   }
 });
 
-// Logout
 app.get('/auth/logout', (req, res) => {
   req.logout((err) => {
     if (err) {
@@ -386,11 +367,7 @@ function ensureAuthenticated(req, res, next) {
   return res.status(401).json({ message: 'Unauthorized' });
 }
 
-// =====================================
-//  Client (Buyer/Seller) Form Endpoints
-// =====================================
-
-// Public form submission endpoint
+// Client (Buyer/Seller) Form Endpoints
 app.post('/api/form/:realtorId', async (req, res) => {
   const realtorId = req.params.realtorId;
   const {
@@ -403,7 +380,7 @@ app.post('/api/form/:realtorId', async (req, res) => {
     location,
     amenities,
     property_images,
-    notes,
+    notes
   } = req.body;
 
   try {
@@ -414,7 +391,7 @@ app.post('/api/form/:realtorId', async (req, res) => {
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
       RETURNING *
     `;
-    
+
     const values = [
       realtorId,
       clientType,
@@ -422,19 +399,17 @@ app.post('/api/form/:realtorId', async (req, res) => {
       lastName,
       phone,
       email,
-      budget,
-      location,
-      amenities,
-      property_images,
-      notes
+      budget || null,
+      location || null,
+      amenities || null,
+      property_images || null,
+      notes || null
     ];
 
     const result = await pool.query(insertQuery, values);
-    console.log('Inserted client:', result.rows[0]); // Debug log
-    
-    return res.json({ 
-      message: 'Form submitted successfully', 
-      client: result.rows[0] 
+    return res.json({
+      message: 'Form submitted successfully',
+      client: result.rows[0]
     });
   } catch (error) {
     console.error('Error saving form data:', error);
@@ -445,17 +420,12 @@ app.post('/api/form/:realtorId', async (req, res) => {
 // Get all clients for a specific realtor
 app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   try {
-    console.log('Fetching clients for realtor:', req.user.id); // Debug log
-    
     const query = `
       SELECT * FROM clients 
       WHERE realtor_id = $1 
       ORDER BY created_at DESC
     `;
-    
     const { rows } = await pool.query(query, [req.user.id]);
-    console.log('Found clients:', rows); // Debug log
-    
     return res.json(rows);
   } catch (error) {
     console.error('Error fetching clients:', error);
@@ -486,7 +456,7 @@ app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Settings update
+// Update settings
 app.put(
   '/api/realtor/settings',
   ensureAuthenticated,
@@ -495,25 +465,23 @@ app.put(
     body('lastName').optional().isString(),
     body('email').optional().isEmail(),
     body('phoneNumber').optional().isMobilePhone(),
-    body('password').optional().isLength({ min: 6 }),
+    body('password').optional().isLength({ min: 6 })
   ],
   async (req, res) => {
-    // If user is OAuth-based (google_id != null, password == null?), do not allow password changes
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { firstName, lastName, email, phoneNumber, password } = req.body;
+
     try {
-      // fetch the user
       const realtor = await findRealtorById(req.user.id);
       if (!realtor) return res.status(404).json({ error: 'User not found' });
 
-      // if they have a google_id and no local password, do not allow password changes
+      // If Google-based account has no local password, block local password changes
       let hashedPassword = null;
       if (realtor.google_id && realtor.password == null && password) {
-        // Do not allow changing password for OAuth user
         return res
           .status(400)
           .json({ error: 'Cannot update password for an OAuth-based account.' });
@@ -521,9 +489,6 @@ app.put(
       if (password && !realtor.google_id) {
         hashedPassword = await bcrypt.hash(password, 10);
       }
-
-      // if they have google oauth, allow email to be changed only as "contact email" but not for login
-      // (Up to you how strictly you want to handle this. This is a simplified example.)
 
       const updateQuery = `
         UPDATE realtors
@@ -543,11 +508,12 @@ app.put(
         email || null,
         phoneNumber || null,
         hashedPassword || null,
-        req.user.id,
+        req.user.id
       ];
 
       const { rows } = await pool.query(updateQuery, values);
       const updatedRealtor = rows[0];
+
       return res.json({
         message: 'Settings updated',
         user: {
@@ -555,9 +521,8 @@ app.put(
           email: updatedRealtor.email,
           firstName: updatedRealtor.first_name,
           lastName: updatedRealtor.last_name,
-          phoneNumber: updatedRealtor.phone_number,
-          // do not return password
-        },
+          phoneNumber: updatedRealtor.phone_number
+        }
       });
     } catch (error) {
       console.error('Settings update error:', error);
@@ -566,20 +531,13 @@ app.put(
   }
 );
 
-// Example "generate link" (similar to your Zapier route) => or you can skip
+// Generate link example
 app.post('/generate-link', ensureAuthenticated, async (req, res) => {
-  // You can build a front-end route like /form/${req.user.id} or a shorter slug 
   const generatedLink = `${FRONTEND_URL}/form/${req.user.id}`;
   return res.json({ link: generatedLink });
 });
 
-// Add a debug route to check session
 app.get('/auth/check', (req, res) => {
-  console.log('Session check:', {
-    session: req.session,
-    user: req.user,
-    isAuthenticated: req.isAuthenticated()
-  });
   res.json({
     authenticated: req.isAuthenticated(),
     user: req.user,
@@ -589,6 +547,6 @@ app.get('/auth/check', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on ${BACKEND_URL}`);
+  console.log(`Server listening on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
 });
