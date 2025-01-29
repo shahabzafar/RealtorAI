@@ -37,12 +37,12 @@ function FormPage() {
         notes: clientType === 'seller' ? notes : null,
       };
 
-      const response = await fetch(`http://localhost:5000/api/form/${realtorId}`, {
+      const response = await fetch(`https://realtoriqbackend.onrender.com/api/form/${realtorId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': 'http://localhost:3000'
+          'Origin': 'https://realtoriqbackend.onrender.com'
         },
         mode: 'cors',
         body: JSON.stringify(payload),

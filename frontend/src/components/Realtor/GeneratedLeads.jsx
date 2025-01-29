@@ -9,7 +9,7 @@ const GeneratedLeads = () => {
 
   const getLeads = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients", {
+      const response = await fetch("https://realtoriqbackend.onrender.com/api/clients", {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
