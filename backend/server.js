@@ -50,12 +50,12 @@ app.use(limiter);
 
 // Update CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000' 
-    : 'https://realtoriq.onrender.com',
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://realtoriq.onrender.com' 
+    : 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Accept', 'Origin', 'Authorization']
 }));
 
 // Add a specific CORS configuration for the form endpoint
@@ -86,16 +86,16 @@ pool.query('SELECT NOW()', (err, res) => {
 
 // Session config
 const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  store: process.env.NODE_ENV === 'production' ? new RedisStore({ client: redisClient }) : undefined
+  proxy: true // Add this for secure cookies behind a proxy
 };
 
 if (process.env.NODE_ENV === 'production') {
@@ -160,6 +160,7 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${BACKEND_URL}/auth/google/callback`,
+      proxy: true
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -346,14 +347,17 @@ app.get(
 
 app.get(
   '/auth/google/callback',
+  (req, res, next) => {
+    console.log('Callback received:', req.url);
+    next();
+  },
   passport.authenticate('google', { 
     failureRedirect: '/signin',
-    session: true 
+    successRedirect: '/realtor',
+    session: true
   }),
   (req, res) => {
-    console.log('Google callback - redirecting to:', `${FRONTEND_URL}/realtor`);
-    // Use 302 redirect to ensure proper redirection
-    res.redirect(302, `${FRONTEND_URL}/realtor`);
+    console.log('Authentication successful, user:', req.user);
   }
 );
 
