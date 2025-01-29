@@ -16,6 +16,7 @@ import '../../styles/Realtor/RealtorApp.css';
 function RealtorApp({ user, onLogout }) {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
+
   const [generatedLink, setGeneratedLink] = useState('');
   const navigate = useNavigate();
 
@@ -25,7 +26,11 @@ function RealtorApp({ user, onLogout }) {
       return;
     }
     fetchClients();
-    setGeneratedLink(`${window.location.origin}/form/${user.id}`);
+
+    // By default, set a local generated link. 
+    if (user.id) {
+      setGeneratedLink(`${window.location.origin}/form/${user.id}`);
+    }
   }, [user, navigate]);
 
   const fetchClients = async () => {
@@ -59,10 +64,7 @@ function RealtorApp({ user, onLogout }) {
 
   return (
     <div className="realtor-app-container dark-mode">
-      <Navbar 
-        user={user} 
-        onLogout={onLogout}
-      />
+      <Navbar user={user} onLogout={onLogout} />
       
       <div className="dashboard-content">
         <RealtorProfileHeader user={user} />
@@ -70,7 +72,9 @@ function RealtorApp({ user, onLogout }) {
         <div className="client-form-section">
           <h2>Your Client Form</h2>
           <p>Share this link or QR code with your clients</p>
-          <FormLinkGenerator 
+          {/* Pass user (and optionally the link) to FormLinkGenerator */}
+          <FormLinkGenerator
+            user={user}
             generatedLink={generatedLink}
             onGenerateLink={handleGenerateLink}
           />
@@ -90,7 +94,7 @@ function RealtorApp({ user, onLogout }) {
           </div>
 
           {selectedClient && (
-            <ClientDetails 
+            <ClientDetails
               client={selectedClient}
               onClose={() => setSelectedClient(null)}
             />

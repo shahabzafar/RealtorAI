@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import '../../styles/Realtor/FormLinkGenerator.css';
 
-const FormLinkGenerator = ({ user }) => {
+const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
   const [linkGenerated, setLinkGenerated] = useState(false);
   const [isShareDrawerOpen, setShareDrawerOpen] = useState(false);
-  const formLink = `${window.location.origin}/form/${user?.id}`;
+
+  const formLink = generatedLink || `${window.location.origin}/form/${user?.id}`;
 
   const handleGenerateLink = () => {
     setLinkGenerated(true);
+    if (onGenerateLink) {
+      onGenerateLink();
+    }
   };
 
   const handleCopyLink = () => {
@@ -71,4 +75,4 @@ const FormLinkGenerator = ({ user }) => {
   );
 };
 
-export default FormLinkGenerator; 
+export default FormLinkGenerator;

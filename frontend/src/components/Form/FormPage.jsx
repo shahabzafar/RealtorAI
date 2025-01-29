@@ -17,7 +17,6 @@ function FormPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-  const frontendUrl = process.env.REACT_APP_FRONTEND_URL || 'http://localhost:3000';
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -43,10 +42,7 @@ function FormPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          // 'Origin' header is generally set automatically by the browser;
-          // including it manually is optional, but if you do:
-          // 'Origin': frontendUrl
+          'Accept': 'application/json'
         },
         mode: 'cors',
         body: JSON.stringify(payload)
@@ -82,7 +78,7 @@ function FormPage() {
 
   if (submitted) {
     return (
-      <div className="form-page-container dark-mode">
+      <div className="form-page-container">
         <h2>Thank you!</h2>
         <p>Your information has been submitted.</p>
       </div>
@@ -90,7 +86,7 @@ function FormPage() {
   }
 
   return (
-    <div className="form-container">
+    <div className="form-page-container">
       <h1>Contact Form</h1>
       {!realtorId && (
         <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>
