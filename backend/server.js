@@ -150,10 +150,12 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${BACKEND_URL}/auth/google/callback`
+      callbackURL: `${BACKEND_URL}/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("Google profile:", profile);
+        
         let realtor = await findRealtorByGoogleId(profile.id);
         if (!realtor) {
           realtor = await createRealtor({
@@ -161,12 +163,13 @@ passport.use(
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
             email: profile.emails[0].value,
-            phoneNumber: ''
+            phoneNumber: '',
           });
         }
         return done(null, realtor);
-      } catch (error) {
-        return done(error);
+      } catch (err) {
+        console.error("Google OAuth Error:", err);
+        return done(err);
       }
     }
   )
