@@ -42,7 +42,7 @@ function FormPage() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': 'https://realtoriqbackend.onrender.com'
+          'Origin': 'https://realtoriq.onrender.com'
         },
         mode: 'cors',
         body: JSON.stringify(payload),
