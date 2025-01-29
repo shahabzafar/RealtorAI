@@ -6,41 +6,31 @@ import '../../styles/Auth/Auth.css';
 const SignIn = ({ onLogin, setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://realtoriqbackend.onrender.com/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
+      const response = await axios.post('/auth/login', { email, password });
+      console.log('Login successful:', response.data);
+
+      setUser({
+        id: response.data.user.id,
+        email: response.data.user.email,
+        firstName: response.data.user.firstName,
+        lastName: response.data.user.lastName,
+        displayName: response.data.user.displayName,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const userData = {
-          ...data.user,
-          displayName: `${data.user.firstName} ${data.user.lastName}`.trim()
-        };
-        onLogin(userData);
-        navigate('/realtor');
-      } else {
-        const error = await response.json();
-        setError(error.message || 'Login failed');
-      }
+      navigate('/realtor');
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Login failed. Please try again.');
+      console.error('Login error:', error.response?.data || error.message);
+      alert(error.response?.data?.message || 'Login failed');
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${axios.defaults.baseURL}/auth/google`;
+    window.location.href = 'https://realtoriqbackend.onrender.com/auth/google';
   };
 
   return (
