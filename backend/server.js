@@ -546,10 +546,9 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
       parser.on('error', err => reject(err));
       parser.on('end', () => resolve(parsedRows));
       
-      const csvStream = new stream.Readable();
-      csvStream.push(req.file.buffer);
-      csvStream.push(null);
+      const csvStream = stream.Readable.from(req.file.buffer);
       csvStream.pipe(parser);
+
     });
   
     for (const row of records) {

@@ -8,14 +8,14 @@ const CSVImport = () => {
 
   // The user selects which CSV column corresponds to each required field
   const [mapping, setMapping] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    clientType: '',
-    budget: '',
-    location: '',
-    amenities: ''
+    firstName: "firstName",
+    lastName: "lastName",
+    phone: "phone",
+    email: "email",
+    clientType: "clientType",
+    budget: "budget",
+    location: "location",
+    amenities: "amenities"
   });
 
   // Set the backend URL from environment variable or default value
