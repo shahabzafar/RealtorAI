@@ -90,16 +90,23 @@ function RealtorApp({ user, onLogout }) {
               style={{
                 backgroundColor: '#3f51b5',
                 color: 'white',
-                fontSize: '20px',
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
                 border: 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               onClick={() => setShowCsvImport(true)}
             >
-              +
+              {/* If you have Font Awesome loaded, use an icon: */}
+              <i className="fas fa-plus" style={{ fontSize: '18px' }}></i>
+              
+              {/* Otherwise, you can do plain text:
+              + 
+              */}
             </button>
           </div>
 
@@ -174,6 +181,7 @@ function RealtorApp({ user, onLogout }) {
         </div>
         <Carousel />
       </div>
+
       <Footer />
     </div>
   );

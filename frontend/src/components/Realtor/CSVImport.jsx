@@ -28,13 +28,11 @@ const CSVImport = () => {
   const parseCsvHeaders = (file) => {
     Papa.parse(file, {
       header: true,
-      preview: 10, // get up to 10 lines
+      preview: 10, // read up to 10 lines for headers
       complete: (results) => {
         if (results.data && results.data.length) {
-          // Extract headers from results.meta.fields
           setHeaders(results.meta.fields || []);
-          // store sample data to show user
-          setSampleData(results.data.slice(0, 5)); // first 5 lines
+          setSampleData(results.data.slice(0, 5)); // store first 5 lines
         }
       },
       error: (err) => {
@@ -66,7 +64,16 @@ const CSVImport = () => {
       if (!res.ok) {
         throw new Error('CSV import failed');
       }
-      const data = await res.json();
+
+      // Attempt to parse JSON; handle empty body
+      const text = await res.text();
+      if (!text) {
+        alert('CSV import completed (no JSON body). Possibly 0 rows imported?');
+        return;
+      }
+
+      // parse JSON
+      const data = JSON.parse(text);
       alert(`CSV import completed successfully. Imported ${data.count} rows.`);
     } catch (error) {
       console.error(error);
@@ -82,6 +89,7 @@ const CSVImport = () => {
         accept=".csv,text/csv"
         onChange={handleFileChange}
       />
+
       {headers.length > 0 && (
         <>
           <h3>Map CSV Columns</h3>
@@ -105,6 +113,7 @@ const CSVImport = () => {
               </div>
             ))}
           </div>
+
           <div style={{ marginTop: '1rem' }}>
             <button onClick={handleUpload}>Import CSV</button>
           </div>
