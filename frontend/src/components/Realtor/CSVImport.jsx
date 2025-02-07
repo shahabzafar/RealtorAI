@@ -18,6 +18,9 @@ const CSVImport = () => {
     amenities: ''
   });
 
+  // Set the backend URL from environment variable or default value
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
   const handleFileChange = (e) => {
     if (e.target.files.length) {
       setCsvFile(e.target.files[0]);
@@ -29,7 +32,7 @@ const CSVImport = () => {
   const parseCsvHeaders = (file) => {
     Papa.parse(file, {
       header: true,
-      preview: 10,
+      preview: 10, // read up to 10 lines for headers
       complete: (results) => {
         if (results.data && results.data.length) {
           setHeaders(results.meta.fields || []);
@@ -57,7 +60,7 @@ const CSVImport = () => {
     formData.append('mapping', JSON.stringify(mapping));
 
     try {
-      const res = await fetch('/api/clients/import-csv', {
+      const res = await fetch(`${backendUrl}/api/clients/import-csv`, {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -84,22 +87,9 @@ const CSVImport = () => {
   };
 
   return (
-    <div
-      style={{
-        background: '#eee',
-        padding: '1rem',
-        borderRadius: '8px',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-      }}
-    >
+    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
       <h2>CSV Import</h2>
-      <input
-        type="file"
-        accept=".csv,text/csv"
-        onChange={handleFileChange}
-      />
-
+      <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
       {headers.length > 0 && (
         <>
           <h3>Map CSV Columns</h3>
@@ -109,10 +99,7 @@ const CSVImport = () => {
               <div key={field} style={{ minWidth: '200px' }}>
                 <label>{field}:</label>
                 <br />
-                <select
-                  value={mapping[field]}
-                  onChange={(e) => handleMappingChange(field, e.target.value)}
-                >
+                <select value={mapping[field]} onChange={(e) => handleMappingChange(field, e.target.value)}>
                   <option value="">Ignore</option>
                   {headers.map((hdr) => (
                     <option key={hdr} value={hdr}>
@@ -123,26 +110,15 @@ const CSVImport = () => {
               </div>
             ))}
           </div>
-
           <div style={{ marginTop: '1rem' }}>
             <button onClick={handleUpload}>Import CSV</button>
           </div>
-
           <h4>Sample Data (first 5 rows)</h4>
-          <table
-            style={{
-              width: '100%',
-              background: '#fff',
-              borderCollapse: 'collapse',
-            }}
-          >
+          <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 {headers.map((hdr) => (
-                  <th
-                    key={hdr}
-                    style={{ border: '1px solid #ccc', padding: '4px' }}
-                  >
+                  <th key={hdr} style={{ border: '1px solid #ccc', padding: '4px' }}>
                     {hdr}
                   </th>
                 ))}
@@ -152,10 +128,7 @@ const CSVImport = () => {
               {sampleData.map((row, idx) => (
                 <tr key={idx}>
                   {headers.map((hdr) => (
-                    <td
-                      key={`${idx}-${hdr}`}
-                      style={{ border: '1px solid #ccc', padding: '4px' }}
-                    >
+                    <td key={`${idx}-${hdr}`} style={{ border: '1px solid #ccc', padding: '4px' }}>
                       {row[hdr]}
                     </td>
                   ))}
