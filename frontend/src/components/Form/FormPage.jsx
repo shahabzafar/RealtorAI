@@ -31,8 +31,6 @@ function FormPage() {
       setDownPayment('');
       return;
     }
-
-    // parse budget
     const b = parseFloat(budget);
     if (isNaN(b) || b <= 0) {
       setDownPayment('');
@@ -40,21 +38,20 @@ function FormPage() {
     }
 
     let calculated = 0;
-
     // if $500,000 or less => 5%
     if (b <= 500000) {
       calculated = b * 0.05;
     }
-    // if $500k to $1.5 million => 5% of first 500k, 10% of the remainder
+    // if $500k to $1.5 million => 5% of first 500k, 10% of remainder
     else if (b > 500000 && b < 1500000) {
       const firstPortion = 500000 * 0.05; // 25k
       const remainder = b - 500000;
-      const secondPortion = remainder * 0.10;
+      const secondPortion = remainder * 0.1;
       calculated = firstPortion + secondPortion;
     }
-    // if $1.5 million or more => 20% of the entire price
+    // if $1.5 million or more => 20% of entire price
     else {
-      calculated = b * 0.20;
+      calculated = b * 0.2;
     }
 
     setDownPayment(calculated.toFixed(2));
@@ -67,7 +64,6 @@ function FormPage() {
         throw new Error('Realtor ID is missing');
       }
 
-      // Combine all fields
       const payload = {
         firstName,
         lastName,
@@ -79,8 +75,6 @@ function FormPage() {
         amenities: clientType === 'buyer' ? amenities : null,
         property_images: clientType === 'seller' ? propertyImages : null,
         notes: clientType === 'seller' ? notes : null,
-
-        // new fields
         urgency,
         income: income || null,
         bankLoanEligibility,
@@ -138,11 +132,9 @@ function FormPage() {
   return (
     <div className="form-page-container dark-mode">
       <h1>Contact Form</h1>
-      {!realtorId && (
-        <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>
-      )}
-      <form onSubmit={handleFormSubmit} className="client-form">
+      {!realtorId && <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>}
 
+      <form onSubmit={handleFormSubmit} className="client-form">
         {/* First Name */}
         <div className="form-group">
           <label>First Name *</label>
@@ -187,7 +179,7 @@ function FormPage() {
           />
         </div>
 
-        {/* Buyer/Seller */}
+        {/* Buyer or Seller */}
         <div className="form-group">
           <label>Are you buying or selling?</label>
           <select value={clientType} onChange={(e) => setClientType(e.target.value)}>
@@ -230,7 +222,7 @@ function FormPage() {
           </label>
         </div>
 
-        {/* Buyer fields */}
+        {/* If buyer, show buyer fields */}
         {clientType === 'buyer' && (
           <>
             <div className="form-group">
@@ -263,38 +255,42 @@ function FormPage() {
             {downPayment && (
               <div className="form-group">
                 <label>Estimated Down Payment Required</label>
-                <input
-                  type="text"
-                  value={downPayment}
-                  readOnly
-                />
+                <input type="text" value={downPayment} readOnly />
               </div>
             )}
 
-            {/* Can afford it? */}
+            {/* Instead of a checkbox, do a yes/no button group */}
             {downPayment && (
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={canAffordDownPayment}
-                    onChange={(e) => setCanAffordDownPayment(e.target.checked)}
-                  />
-                  I can afford the above down payment
-                </label>
+              <div className="form-group yes-no-buttons">
+                <label>Can you afford the above down payment?</label>
+                <div className="button-group">
+                  <button
+                    type="button"
+                    className={canAffordDownPayment ? 'selected' : ''}
+                    onClick={() => setCanAffordDownPayment(true)}
+                  >
+                    YES
+                  </button>
+                  <button
+                    type="button"
+                    className={!canAffordDownPayment ? 'selected' : ''}
+                    onClick={() => setCanAffordDownPayment(false)}
+                  >
+                    NO
+                  </button>
+                </div>
               </div>
             )}
           </>
         )}
 
-        {/* Seller fields */}
+        {/* If seller, show seller fields */}
         {clientType === 'seller' && (
           <>
             <div className="form-group">
               <label>Property Images</label>
               <input type="file" multiple onChange={handleFileChange} />
             </div>
-
             <div className="form-group">
               <label>Property Description / Notes</label>
               <textarea

@@ -16,6 +16,9 @@ const { Pool } = require('pg');
 const helmet = require('helmet');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
+const multer = require('multer');
+const csvParser = require('csv-parse');
+const stream = require('stream');
 
 // Pick the URLs from the environment or default to localhost if dev
 const isProd = (process.env.NODE_ENV === 'production');
@@ -254,8 +257,8 @@ app.post(
 
       // Create new realtor
       const result = await pool.query(
-        `INSERT INTO realtors (first_name, last_name, email, password, phone_number)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        `INSERT INTO realtors (first_name, last_name, email, password, phone_number, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
         [firstName, lastName, email, hashedPassword, phoneNumber]
       );
       const newRealtor = result.rows[0];
@@ -386,15 +389,24 @@ app.post('/api/form/:realtorId', async (req, res) => {
     location,
     amenities,
     property_images,
-    notes
+    notes,
+    urgency,
+    income,
+    bankLoanEligibility,
+    downPayment,
+    canAffordDownPayment
   } = req.body;
 
   try {
     const insertQuery = `
       INSERT INTO clients
-        (realtor_id, client_type, first_name, last_name, phone, email, budget, location, amenities, property_images, notes, created_at)
+        (realtor_id, client_type, first_name, last_name, phone, email,
+         budget, location, amenities, property_images, notes, created_at,
+         urgency, income, bank_loan_eligibility, down_payment, can_afford_down_payment)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+        ($1, $2, $3, $4, $5, $6,
+         $7, $8, $9, $10, $11, NOW(),
+         $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
@@ -409,7 +421,12 @@ app.post('/api/form/:realtorId', async (req, res) => {
       location || null,
       amenities || null,
       property_images || null,
-      notes || null
+      notes || null,
+      urgency || null,
+      income || null,
+      bankLoanEligibility === true,
+      downPayment || null,
+      canAffordDownPayment === true
     ];
 
     const result = await pool.query(insertQuery, values);
@@ -442,7 +459,7 @@ app.get('/api/clients', ensureAuthenticated, async (req, res) => {
 // Pin/Unpin a client
 app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   const { clientId } = req.params;
-  const { pinned } = req.body; // boolean
+  const { pinned } = req.body;
   try {
     const query = `
       UPDATE clients
@@ -462,7 +479,6 @@ app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Update settings
 app.put(
   '/api/realtor/settings',
   ensureAuthenticated,
@@ -537,10 +553,90 @@ app.put(
   }
 );
 
-// Generate link example
 app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   const generatedLink = `${FRONTEND_URL}/form/${req.user.id}`;
   return res.json({ link: generatedLink });
+});
+
+const upload = multer({ storage: multer.MemoryStorage() });
+
+app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No CSV file uploaded' });
+    }
+
+    // Mappings from client side
+    const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
+
+    // Parse the CSV
+    const csvStream = new stream.Readable();
+    csvStream.push(req.file.buffer);
+    csvStream.push(null);
+
+    let parsedRows = [];
+    const parser = csvParser({
+      columns: true, // treat first row as header
+      skip_empty_lines: true
+    });
+
+    parser.on('readable', () => {
+      let record;
+      while ((record = parser.read()) !== null) {
+        parsedRows.push(record);
+      }
+    });
+
+    parser.on('end', async () => {
+      // Now insert each row
+      for (const row of parsedRows) {
+        // Build an insert object based on the columnMapping
+        const insertData = {
+          realtor_id: req.user.id,
+          client_type: row[columnMapping.clientType] || 'buyer', // default
+          first_name: row[columnMapping.firstName] || 'Unknown',
+          last_name: row[columnMapping.lastName] || 'Unknown',
+          phone: row[columnMapping.phone] || null,
+          email: row[columnMapping.email] || null,
+          budget: row[columnMapping.budget] || null,
+          location: row[columnMapping.location] || null,
+          amenities: row[columnMapping.amenities] || null,
+          // Add fields here
+        };
+
+        // Insert
+        await pool.query(
+          `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
+                                budget, location, amenities, pinned, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false, NOW())`,
+          [
+            insertData.realtor_id,
+            insertData.client_type,
+            insertData.first_name,
+            insertData.last_name,
+            insertData.phone,
+            insertData.email,
+            insertData.budget,
+            insertData.location,
+            insertData.amenities
+          ]
+        );
+      }
+
+      return res.json({ message: 'CSV import completed', count: parsedRows.length });
+    });
+
+    parser.on('error', (err) => {
+      console.error('CSV parser error:', err);
+      return res.status(500).json({ error: 'CSV parse error' });
+    });
+
+    csvStream.pipe(parser);
+
+  } catch (error) {
+    console.error('CSV import error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 app.get('/auth/check', (req, res) => {
@@ -551,7 +647,6 @@ app.get('/auth/check', (req, res) => {
   });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
@@ -998,12 +1093,13 @@ BuyApp.jsx:
 Form:
 FormPage.jsx:
 "
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import '../../styles/Form/FormPage.css';
 
 function FormPage() {
   const { realtorId } = useParams();
+
   const [clientType, setClientType] = useState('buyer');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -1015,8 +1111,49 @@ function FormPage() {
   const [propertyImages, setPropertyImages] = useState([]);
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [urgency, setUrgency] = useState('Not specified');
+  const [income, setIncome] = useState('');
+  const [bankLoanEligibility, setBankLoanEligibility] = useState(false);
+
+  const [downPayment, setDownPayment] = useState('');
+  const [canAffordDownPayment, setCanAffordDownPayment] = useState(false);
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
+  // Calculate down payment whenever budget changes
+  useEffect(() => {
+    if (!budget) {
+      setDownPayment('');
+      return;
+    }
+
+    // parse budget
+    const b = parseFloat(budget);
+    if (isNaN(b) || b <= 0) {
+      setDownPayment('');
+      return;
+    }
+
+    let calculated = 0;
+
+    // if $500,000 or less => 5%
+    if (b <= 500000) {
+      calculated = b * 0.05;
+    }
+    // if $500k to $1.5 million => 5% of first 500k, 10% of the remainder
+    else if (b > 500000 && b < 1500000) {
+      const firstPortion = 500000 * 0.05; // 25k
+      const remainder = b - 500000;
+      const secondPortion = remainder * 0.10;
+      calculated = firstPortion + secondPortion;
+    }
+    // if $1.5 million or more => 20% of the entire price
+    else {
+      calculated = b * 0.20;
+    }
+
+    setDownPayment(calculated.toFixed(2));
+  }, [budget]);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -1025,6 +1162,7 @@ function FormPage() {
         throw new Error('Realtor ID is missing');
       }
 
+      // Combine all fields
       const payload = {
         firstName,
         lastName,
@@ -1035,14 +1173,21 @@ function FormPage() {
         location: clientType === 'buyer' ? location : null,
         amenities: clientType === 'buyer' ? amenities : null,
         property_images: clientType === 'seller' ? propertyImages : null,
-        notes: clientType === 'seller' ? notes : null
+        notes: clientType === 'seller' ? notes : null,
+
+        // new fields
+        urgency,
+        income: income || null,
+        bankLoanEligibility,
+        downPayment: downPayment ? parseFloat(downPayment) : null,
+        canAffordDownPayment
       };
 
       const response = await fetch(`${backendUrl}/api/form/${realtorId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         mode: 'cors',
         body: JSON.stringify(payload)
@@ -1092,6 +1237,8 @@ function FormPage() {
         <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>
       )}
       <form onSubmit={handleFormSubmit} className="client-form">
+
+        {/* First Name */}
         <div className="form-group">
           <label>First Name *</label>
           <input
@@ -1102,6 +1249,7 @@ function FormPage() {
           />
         </div>
 
+        {/* Last Name */}
         <div className="form-group">
           <label>Last Name *</label>
           <input
@@ -1112,6 +1260,7 @@ function FormPage() {
           />
         </div>
 
+        {/* Phone */}
         <div className="form-group">
           <label>Phone *</label>
           <input
@@ -1122,6 +1271,7 @@ function FormPage() {
           />
         </div>
 
+        {/* Email */}
         <div className="form-group">
           <label>Email *</label>
           <input
@@ -1132,6 +1282,7 @@ function FormPage() {
           />
         </div>
 
+        {/* Buyer/Seller */}
         <div className="form-group">
           <label>Are you buying or selling?</label>
           <select value={clientType} onChange={(e) => setClientType(e.target.value)}>
@@ -1140,6 +1291,41 @@ function FormPage() {
           </select>
         </div>
 
+        {/* Urgency */}
+        <div className="form-group">
+          <label>Urgency</label>
+          <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+            <option value="Immediate">Immediate</option>
+            <option value="Around 4 months">Around 4 months</option>
+            <option value="In the next year">In the next year</option>
+            <option value="Not specified">Not specified</option>
+          </select>
+        </div>
+
+        {/* Income */}
+        <div className="form-group">
+          <label>Income (annual or monthly)</label>
+          <input
+            type="number"
+            value={income}
+            onChange={(e) => setIncome(e.target.value)}
+            placeholder="e.g. 75000"
+          />
+        </div>
+
+        {/* Bank Loan Eligibility */}
+        <div className="form-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={bankLoanEligibility}
+              onChange={(e) => setBankLoanEligibility(e.target.checked)}
+            />
+            Eligible for Bank Loan?
+          </label>
+        </div>
+
+        {/* Buyer fields */}
         {clientType === 'buyer' && (
           <>
             <div className="form-group">
@@ -1167,9 +1353,36 @@ function FormPage() {
                 onChange={(e) => setAmenities(e.target.value)}
               />
             </div>
+
+            {/* Down Payment Calculation */}
+            {downPayment && (
+              <div className="form-group">
+                <label>Estimated Down Payment Required</label>
+                <input
+                  type="text"
+                  value={downPayment}
+                  readOnly
+                />
+              </div>
+            )}
+
+            {/* Can afford it? */}
+            {downPayment && (
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={canAffordDownPayment}
+                    onChange={(e) => setCanAffordDownPayment(e.target.checked)}
+                  />
+                  I can afford the above down payment
+                </label>
+              </div>
+            )}
           </>
         )}
 
+        {/* Seller fields */}
         {clientType === 'seller' && (
           <>
             <div className="form-group">
@@ -1815,6 +2028,151 @@ const ClientDetails = ({ client, onClose }) => {
 export default ClientDetails; 
 "
 
+CSVImport.jsx:
+"
+import React, { useState } from 'react';
+import Papa from 'papaparse';
+
+const CSVImport = () => {
+  const [csvFile, setCsvFile] = useState(null);
+  const [headers, setHeaders] = useState([]);
+  const [sampleData, setSampleData] = useState([]);
+
+  // The user selects which CSV column corresponds to each required field
+  const [mapping, setMapping] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    clientType: '',
+    budget: '',
+    location: '',
+    amenities: ''
+  });
+
+  const handleFileChange = (e) => {
+    if (e.target.files.length) {
+      setCsvFile(e.target.files[0]);
+      parseCsvHeaders(e.target.files[0]);
+    }
+  };
+
+  // We parse only the first row with Papa for headers
+  const parseCsvHeaders = (file) => {
+    Papa.parse(file, {
+      header: true,
+      preview: 10, // get up to 10 lines
+      complete: (results) => {
+        if (results.data && results.data.length) {
+          // Extract headers from results.meta.fields
+          setHeaders(results.meta.fields || []);
+          // store sample data to show user
+          setSampleData(results.data.slice(0, 5)); // first 5 lines
+        }
+      },
+      error: (err) => {
+        console.error('CSV parsing error:', err);
+      }
+    });
+  };
+
+  const handleMappingChange = (field, csvHeader) => {
+    setMapping((prev) => ({ ...prev, [field]: csvHeader }));
+  };
+
+  const handleUpload = async () => {
+    if (!csvFile) {
+      alert('No file selected!');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', csvFile);
+    formData.append('mapping', JSON.stringify(mapping));
+
+    try {
+      const res = await fetch('/api/clients/import-csv', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        throw new Error('CSV import failed');
+      }
+      const data = await res.json();
+      alert(`CSV import completed successfully. Imported ${data.count} rows.`);
+    } catch (error) {
+      console.error(error);
+      alert('Error importing CSV');
+    }
+  };
+
+  return (
+    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px' }}>
+      <h2>CSV Import</h2>
+      <input
+        type="file"
+        accept=".csv,text/csv"
+        onChange={handleFileChange}
+      />
+      {headers.length > 0 && (
+        <>
+          <h3>Map CSV Columns</h3>
+          <p>Choose which CSV column matches each client field:</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+            {Object.keys(mapping).map((field) => (
+              <div key={field} style={{ minWidth: '200px' }}>
+                <label>{field}:</label>
+                <br />
+                <select
+                  value={mapping[field]}
+                  onChange={(e) => handleMappingChange(field, e.target.value)}
+                >
+                  <option value="">Ignore</option>
+                  {headers.map((hdr) => (
+                    <option key={hdr} value={hdr}>
+                      {hdr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: '1rem' }}>
+            <button onClick={handleUpload}>Import CSV</button>
+          </div>
+
+          <h4>Sample Data (first 5 rows)</h4>
+          <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {headers.map((hdr) => (
+                  <th key={hdr} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                    {hdr}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sampleData.map((row, idx) => (
+                <tr key={idx}>
+                  {headers.map((hdr) => (
+                    <td key={`${idx}-${hdr}`} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                      {row[hdr]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default CSVImport;
+"
+
 FormLinkGenerator.jsx:
 "
 import React, { useState } from 'react';
@@ -1824,6 +2182,12 @@ import '../../styles/Realtor/FormLinkGenerator.css';
 const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
   const [linkGenerated, setLinkGenerated] = useState(false);
   const [isShareDrawerOpen, setShareDrawerOpen] = useState(false);
+
+  const [showSocialOptions, setShowSocialOptions] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [postMessage, setPostMessage] = useState('');
+
+  const realtorFullName = user ? `${user.firstName} ${user.lastName}` : 'Your Realtor';
 
   const formLink = generatedLink || `${window.location.origin}/form/${user?.id}`;
 
@@ -1841,6 +2205,27 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
 
   const toggleShareDrawer = () => {
     setShareDrawerOpen(!isShareDrawerOpen);
+  };
+
+  // When user chooses a platform
+  const handleSocialClick = (platform) => {
+    setShowSocialOptions(false);
+    setSelectedPlatform(platform);
+    // Generate a default post message
+    const defaultMessage = `Hey everyone, it's ${realtorFullName}! If you or anyone you know is looking to buy or sell, please fill out my client acquisition form here: ${formLink}`;
+    setPostMessage(defaultMessage);
+  };
+
+  // Show the "edit message" modal or area
+  const handleOpenSocialOptions = () => {
+    setShowSocialOptions(true);
+  };
+
+  const handlePostToSocial = () => {
+    alert(`Posted to ${selectedPlatform} with message:\n\n${postMessage}\n\n(Real integration not implemented)`);
+    // reset
+    setSelectedPlatform('');
+    setPostMessage('');
   };
 
   return (
@@ -1874,18 +2259,41 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
 
           {isShareDrawerOpen && (
             <div className="share-drawer">
-              <button className="share-option">
-                <i className="fas fa-comment"></i>
-                Messages
+              <button className="share-option" onClick={() => handleSocialClick('Facebook')}>
+                <i className="fab fa-facebook"></i> Facebook
               </button>
-              <button className="share-option">
-                <i className="fab fa-whatsapp"></i>
-                WhatsApp
+              <button className="share-option" onClick={() => handleSocialClick('Instagram')}>
+                <i className="fab fa-instagram"></i> Instagram
               </button>
-              <button className="share-option">
-                <i className="fas fa-envelope"></i>
-                Email
+              <button className="share-option" onClick={() => handleSocialClick('LinkedIn')}>
+                <i className="fab fa-linkedin"></i> LinkedIn
               </button>
+            </div>
+          )}
+
+          {/* Simple modal or inline box to allow user editing the message */}
+          {selectedPlatform && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              background: '#f5f5f5',
+              borderRadius: '8px'
+            }}>
+              <h4>Preview your post for {selectedPlatform}:</h4>
+              <textarea
+                style={{ width: '100%', height: '100px' }}
+                value={postMessage}
+                onChange={(e) => setPostMessage(e.target.value)}
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <button onClick={handlePostToSocial}>Post</button>
+                <button style={{ marginLeft: '1rem' }} onClick={() => {
+                  setSelectedPlatform('');
+                  setPostMessage('');
+                }}>
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
