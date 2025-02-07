@@ -555,7 +555,7 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
     for (const row of records) {
       const insertData = {
         realtor_id: req.user.id,
-        client_type: row[columnMapping.clientType] || 'buyer',
+        client_type: (row[columnMapping.clientType] || 'buyer').toLowerCase(),
         first_name: row[columnMapping.firstName] || 'Unknown',
         last_name: row[columnMapping.lastName] || 'Unknown',
         phone: row[columnMapping.phone] || null,
