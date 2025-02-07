@@ -11,6 +11,7 @@ import RealtorProfileHeader from './RealtorProfileHeader';
 import Footer from '../Home/Footer';
 import Carousel from './Carousel';
 import AiChat from './AiChat';
+import CSVImport from './CSVImport';
 import '../../styles/Realtor/RealtorApp.css';
 
 function RealtorApp({ user, onLogout }) {
@@ -20,6 +21,9 @@ function RealtorApp({ user, onLogout }) {
   const [generatedLink, setGeneratedLink] = useState('');
   const navigate = useNavigate();
 
+  // For showing/hiding CSV Import modal
+  const [showCsvImport, setShowCsvImport] = useState(false);
+
   useEffect(() => {
     if (!user) {
       navigate('/signin');
@@ -27,7 +31,7 @@ function RealtorApp({ user, onLogout }) {
     }
     fetchClients();
 
-    // By default, set a local generated link. 
+    // By default, set a local generated link
     if (user.id) {
       setGeneratedLink(`${window.location.origin}/form/${user.id}`);
     }
@@ -72,7 +76,6 @@ function RealtorApp({ user, onLogout }) {
         <div className="client-form-section">
           <h2>Your Client Form</h2>
           <p>Share this link or QR code with your clients</p>
-          {/* Pass user (and optionally the link) to FormLinkGenerator */}
           <FormLinkGenerator
             user={user}
             generatedLink={generatedLink}
@@ -81,7 +84,25 @@ function RealtorApp({ user, onLogout }) {
         </div>
 
         <div className="clients-section">
-          <h3>Clients</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3>Clients</h3>
+            <button
+              style={{
+                backgroundColor: '#3f51b5',
+                color: 'white',
+                fontSize: '20px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowCsvImport(true)}
+            >
+              +
+            </button>
+          </div>
+
           <div className="clients-grid">
             {clients.map((client) => (
               <ClientCard
@@ -99,10 +120,55 @@ function RealtorApp({ user, onLogout }) {
               onClose={() => setSelectedClient(null)}
             />
           )}
+
+          {/* Our overlay for CSV import */}
+          {showCsvImport && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: 9999,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  width: '600px',
+                  maxWidth: '90%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  position: 'relative'
+                }}
+              >
+                <button
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                  }}
+                  onClick={() => setShowCsvImport(false)}
+                >
+                  ✕
+                </button>
+                <CSVImport />
+              </div>
+            </div>
+          )}
         </div>
 
         <PerformanceOverview />
         <GeneratedLeads />
+
         <div className="ai-chat-container">
           <AiChat />
         </div>

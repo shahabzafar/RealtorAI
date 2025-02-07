@@ -5,7 +5,6 @@ import '../../styles/Realtor/FormLinkGenerator.css';
 const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
   const [linkGenerated, setLinkGenerated] = useState(false);
 
-  // isShareOverlayOpen replaces isShareDrawerOpen to show an overlay
   const [isShareOverlayOpen, setIsShareOverlayOpen] = useState(false);
 
   const [selectedPlatform, setSelectedPlatform] = useState('');
@@ -45,7 +44,6 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
     setPostMessage(defaultMessage);
   };
 
-  // Post to social (in reality, you'd integrate actual share APIs)
   const handlePostToSocial = () => {
     alert(`Posted to ${selectedPlatform} with message:\n\n${postMessage}\n\n(Real integration not implemented)`);
     // reset

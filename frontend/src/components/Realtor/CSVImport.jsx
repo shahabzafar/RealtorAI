@@ -25,7 +25,6 @@ const CSVImport = () => {
     }
   };
 
-  // We parse only the first row with Papa for headers
   const parseCsvHeaders = (file) => {
     Papa.parse(file, {
       header: true,
@@ -53,6 +52,7 @@ const CSVImport = () => {
       alert('No file selected!');
       return;
     }
+
     const formData = new FormData();
     formData.append('file', csvFile);
     formData.append('mapping', JSON.stringify(mapping));
@@ -75,7 +75,7 @@ const CSVImport = () => {
   };
 
   return (
-    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px' }}>
+    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
       <h2>CSV Import</h2>
       <input
         type="file"
