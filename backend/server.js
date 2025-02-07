@@ -17,8 +17,7 @@ const multer = require('multer');
 const csvParser = require('csv-parse');
 const stream = require('stream');
 
-// Pick the URLs from the environment or default to localhost if dev
-const isProd = (process.env.NODE_ENV === 'production');
+const isProd = process.env.NODE_ENV === 'production';
 
 const FRONTEND_URL = isProd
   ? process.env.FRONTEND_URL || 'https://realtoriq.onrender.com'
@@ -28,7 +27,6 @@ const BACKEND_URL = isProd
   ? process.env.BACKEND_URL || 'https://realtoriqbackend.onrender.com'
   : 'http://localhost:5000';
 
-// Log environment info
 console.log('Current NODE_ENV:', process.env.NODE_ENV);
 console.log('Frontend URL:', FRONTEND_URL);
 console.log('Backend URL:', BACKEND_URL);
@@ -36,19 +34,16 @@ console.log('Backend URL:', BACKEND_URL);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(helmet());
 app.use(express.json());
-app.set('trust proxy', 1); // trust first proxy
+app.set('trust proxy', 1);
 
-// Rate limit (basic example)
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 100
 });
 app.use(limiter);
 
-// Update CORS configuration
 app.use(
   cors({
     origin: FRONTEND_URL,
@@ -58,15 +53,11 @@ app.use(
   })
 );
 
-// For any preflight requests on form route
 app.options('/api/form/:realtorId', cors());
 
-// Database Pool Configuration
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {
@@ -74,7 +65,6 @@ pool.on('error', (err) => {
   console.error('Using DATABASE_URL:', process.env.DATABASE_URL);
 });
 
-// Test database connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Error testing database connection:', err);
@@ -83,7 +73,6 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// Session config
 const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'someSecret',
   resave: false,
@@ -92,7 +81,7 @@ const sessionConfig = {
     secure: isProd,
     httpOnly: true,
     sameSite: isProd ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000
   },
   proxy: true
 };
@@ -102,10 +91,12 @@ if (isProd && process.env.REDIS_URL) {
     url: process.env.REDIS_URL
   });
   redisClient.connect().catch(console.error);
-  redisClient.on('connect', () => console.log('Connected to Redis successfully.'));
-  redisClient.on('error', (err) => console.error('Redis connection error:', err));
-
-  // Use Redis store in production
+  redisClient.on('connect', () =>
+    console.log('Connected to Redis successfully.')
+  );
+  redisClient.on('error', (err) =>
+    console.error('Redis connection error:', err)
+  );
   sessionConfig.store = new RedisStore({ client: redisClient });
 }
 
@@ -116,7 +107,10 @@ app.use(passport.session());
 // Database Helper Functions
 async function findRealtorByGoogleId(googleId) {
   try {
-    const result = await pool.query('SELECT * FROM realtors WHERE google_id = $1', [googleId]);
+    const result = await pool.query(
+      'SELECT * FROM realtors WHERE google_id = $1',
+      [googleId]
+    );
     return result.rows[0];
   } catch (error) {
     console.error('Error in findRealtorByGoogleId:', error);
@@ -158,7 +152,6 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         console.log("Google profile:", profile);
-        
         let realtor = await findRealtorByGoogleId(profile.id);
         if (!realtor) {
           realtor = await createRealtor({
@@ -200,7 +193,6 @@ passport.use(
   })
 );
 
-// Serialize / Deserialize
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
@@ -239,28 +231,19 @@ app.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
     const { firstName, lastName, email, password, phoneNumber } = req.body;
-
     try {
-      // Check if email exists
       const existingUser = await pool.query('SELECT * FROM realtors WHERE email = $1', [email]);
       if (existingUser.rows.length > 0) {
         return res.status(400).json({ message: 'Email already in use.' });
       }
-
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create new realtor
       const result = await pool.query(
         `INSERT INTO realtors (first_name, last_name, email, password, phone_number, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
         [firstName, lastName, email, hashedPassword, phoneNumber]
       );
       const newRealtor = result.rows[0];
-
-      // Auto-login
       req.login(newRealtor, (err) => {
         if (err) return next(err);
         res.json({
@@ -313,16 +296,13 @@ app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
 
 app.get(
   '/auth/google',
-  passport.authenticate('google', {
-    scope: ['profile', 'email']
-  })
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 app.get(
   '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    // Redirect to frontend after successful Google login
     res.redirect(`${FRONTEND_URL}/main`);
   }
 );
@@ -367,13 +347,11 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-// Helper: check if user is authenticated
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) return next();
   return res.status(401).json({ message: 'Unauthorized' });
 }
 
-// Client (Buyer/Seller) Form Endpoints
 app.post('/api/form/:realtorId', async (req, res) => {
   const realtorId = req.params.realtorId;
   const {
@@ -393,7 +371,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
     downPayment,
     canAffordDownPayment
   } = req.body;
-
   try {
     const insertQuery = `
       INSERT INTO clients
@@ -406,7 +383,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
          $12, $13, $14, $15, $16)
       RETURNING *
     `;
-
     const values = [
       realtorId,
       clientType,
@@ -425,7 +401,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
       downPayment || null,
       canAffordDownPayment === true
     ];
-
     const result = await pool.query(insertQuery, values);
     return res.json({
       message: 'Form submitted successfully',
@@ -437,7 +412,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
   }
 });
 
-// Get all clients for a specific realtor
 app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   try {
     const query = `
@@ -453,7 +427,6 @@ app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Pin/Unpin a client
 app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   const { clientId } = req.params;
   const { pinned } = req.body;
@@ -491,14 +464,10 @@ app.put(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
     const { firstName, lastName, email, phoneNumber, password } = req.body;
-
     try {
       const realtor = await findRealtorById(req.user.id);
       if (!realtor) return res.status(404).json({ error: 'User not found' });
-
-      // If Google-based account has no local password, block local password changes
       let hashedPassword = null;
       if (realtor.google_id && realtor.password == null && password) {
         return res
@@ -508,7 +477,6 @@ app.put(
       if (password && !realtor.google_id) {
         hashedPassword = await bcrypt.hash(password, 10);
       }
-
       const updateQuery = `
         UPDATE realtors
         SET
@@ -529,10 +497,8 @@ app.put(
         hashedPassword || null,
         req.user.id
       ];
-
       const { rows } = await pool.query(updateQuery, values);
       const updatedRealtor = rows[0];
-
       return res.json({
         message: 'Settings updated',
         user: {
@@ -555,82 +521,69 @@ app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   return res.json({ link: generatedLink });
 });
 
-// **CHANGED THIS LINE TO USE lowercase memoryStorage**:
+// Use memoryStorage for multer uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
+  
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No CSV file uploaded' });
-    }
-
-    // Mappings from client side
-    const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
-
-    // Parse the CSV
-    const csvStream = new stream.Readable();
-    csvStream.push(req.file.buffer);
-    csvStream.push(null);
-
-    let parsedRows = [];
-    const parser = csvParser({
-      columns: true, // treat first row as header
-      skip_empty_lines: true
+    const records = await new Promise((resolve, reject) => {
+      const parsedRows = [];
+      const parser = csvParser({
+        columns: true,
+        skip_empty_lines: true
+      });
+      parser.on('readable', () => {
+        let record;
+        while ((record = parser.read()) !== null) {
+          parsedRows.push(record);
+        }
+      });
+      parser.on('error', err => reject(err));
+      parser.on('end', () => resolve(parsedRows));
+      
+      const csvStream = new stream.Readable();
+      csvStream.push(req.file.buffer);
+      csvStream.push(null);
+      csvStream.pipe(parser);
     });
-
-    parser.on('readable', () => {
-      let record;
-      while ((record = parser.read()) !== null) {
-        parsedRows.push(record);
-      }
-    });
-
-    parser.on('end', async () => {
-      // Now insert each row
-      for (const row of parsedRows) {
-        // Build an insert object based on the columnMapping
-        const insertData = {
-          realtor_id: req.user.id,
-          client_type: row[columnMapping.clientType] || 'buyer', // default
-          first_name: row[columnMapping.firstName] || 'Unknown',
-          last_name: row[columnMapping.lastName] || 'Unknown',
-          phone: row[columnMapping.phone] || null,
-          email: row[columnMapping.email] || null,
-          budget: row[columnMapping.budget] || null,
-          location: row[columnMapping.location] || null,
-          amenities: row[columnMapping.amenities] || null,
-          // Add fields here if needed
-        };
-
-        // Insert
-        await pool.query(
-          `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
+  
+    for (const row of records) {
+      const insertData = {
+        realtor_id: req.user.id,
+        client_type: row[columnMapping.clientType] || 'buyer',
+        first_name: row[columnMapping.firstName] || 'Unknown',
+        last_name: row[columnMapping.lastName] || 'Unknown',
+        phone: row[columnMapping.phone] || null,
+        email: row[columnMapping.email] || null,
+        budget: row[columnMapping.budget] || null,
+        location: row[columnMapping.location] || null,
+        amenities: row[columnMapping.amenities] || null,
+      };
+  
+      await pool.query(
+        `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
                                 budget, location, amenities, pinned, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false, NOW())`,
-          [
-            insertData.realtor_id,
-            insertData.client_type,
-            insertData.first_name,
-            insertData.last_name,
-            insertData.phone,
-            insertData.email,
-            insertData.budget,
-            insertData.location,
-            insertData.amenities
-          ]
-        );
-      }
-
-      return res.json({ message: 'CSV import completed', count: parsedRows.length });
-    });
-
-    parser.on('error', (err) => {
-      console.error('CSV parser error:', err);
-      return res.status(500).json({ error: 'CSV parse error' });
-    });
-
-    csvStream.pipe(parser);
-
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW())`,
+        [
+          insertData.realtor_id,
+          insertData.client_type,
+          insertData.first_name,
+          insertData.last_name,
+          insertData.phone,
+          insertData.email,
+          insertData.budget,
+          insertData.location,
+          insertData.amenities
+        ]
+      );
+    }
+  
+    return res.json({ message: 'CSV import completed', count: records.length });
   } catch (error) {
     console.error('CSV import error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
