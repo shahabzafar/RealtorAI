@@ -546,7 +546,7 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
       parser.on('error', err => reject(err));
       parser.on('end', () => resolve(parsedRows));
       
-      const csvStream = stream.Readable.from(req.file.buffer);
+      const csvStream = stream.Readable.from([req.file.buffer]);
       csvStream.pipe(parser);
 
     });
