@@ -13,6 +13,9 @@ const { Pool } = require('pg');
 const helmet = require('helmet');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
+const multer = require('multer');
+const csvParser = require('csv-parse');
+const stream = require('stream');
 
 // Pick the URLs from the environment or default to localhost if dev
 const isProd = (process.env.NODE_ENV === 'production');
@@ -251,8 +254,8 @@ app.post(
 
       // Create new realtor
       const result = await pool.query(
-        `INSERT INTO realtors (first_name, last_name, email, password, phone_number)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        `INSERT INTO realtors (first_name, last_name, email, password, phone_number, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
         [firstName, lastName, email, hashedPassword, phoneNumber]
       );
       const newRealtor = result.rows[0];
@@ -383,15 +386,24 @@ app.post('/api/form/:realtorId', async (req, res) => {
     location,
     amenities,
     property_images,
-    notes
+    notes,
+    urgency,
+    income,
+    bankLoanEligibility,
+    downPayment,
+    canAffordDownPayment
   } = req.body;
 
   try {
     const insertQuery = `
       INSERT INTO clients
-        (realtor_id, client_type, first_name, last_name, phone, email, budget, location, amenities, property_images, notes, created_at)
+        (realtor_id, client_type, first_name, last_name, phone, email,
+         budget, location, amenities, property_images, notes, created_at,
+         urgency, income, bank_loan_eligibility, down_payment, can_afford_down_payment)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+        ($1, $2, $3, $4, $5, $6,
+         $7, $8, $9, $10, $11, NOW(),
+         $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
@@ -406,7 +418,12 @@ app.post('/api/form/:realtorId', async (req, res) => {
       location || null,
       amenities || null,
       property_images || null,
-      notes || null
+      notes || null,
+      urgency || null,
+      income || null,
+      bankLoanEligibility === true,
+      downPayment || null,
+      canAffordDownPayment === true
     ];
 
     const result = await pool.query(insertQuery, values);
@@ -439,7 +456,7 @@ app.get('/api/clients', ensureAuthenticated, async (req, res) => {
 // Pin/Unpin a client
 app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   const { clientId } = req.params;
-  const { pinned } = req.body; // boolean
+  const { pinned } = req.body;
   try {
     const query = `
       UPDATE clients
@@ -459,7 +476,6 @@ app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Update settings
 app.put(
   '/api/realtor/settings',
   ensureAuthenticated,
@@ -534,10 +550,90 @@ app.put(
   }
 );
 
-// Generate link example
 app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   const generatedLink = `${FRONTEND_URL}/form/${req.user.id}`;
   return res.json({ link: generatedLink });
+});
+
+const upload = multer({ storage: multer.MemoryStorage() });
+
+app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No CSV file uploaded' });
+    }
+
+    // Mappings from client side
+    const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
+
+    // Parse the CSV
+    const csvStream = new stream.Readable();
+    csvStream.push(req.file.buffer);
+    csvStream.push(null);
+
+    let parsedRows = [];
+    const parser = csvParser({
+      columns: true, // treat first row as header
+      skip_empty_lines: true
+    });
+
+    parser.on('readable', () => {
+      let record;
+      while ((record = parser.read()) !== null) {
+        parsedRows.push(record);
+      }
+    });
+
+    parser.on('end', async () => {
+      // Now insert each row
+      for (const row of parsedRows) {
+        // Build an insert object based on the columnMapping
+        const insertData = {
+          realtor_id: req.user.id,
+          client_type: row[columnMapping.clientType] || 'buyer', // default
+          first_name: row[columnMapping.firstName] || 'Unknown',
+          last_name: row[columnMapping.lastName] || 'Unknown',
+          phone: row[columnMapping.phone] || null,
+          email: row[columnMapping.email] || null,
+          budget: row[columnMapping.budget] || null,
+          location: row[columnMapping.location] || null,
+          amenities: row[columnMapping.amenities] || null,
+          // Add fields here
+        };
+
+        // Insert
+        await pool.query(
+          `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
+                                budget, location, amenities, pinned, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false, NOW())`,
+          [
+            insertData.realtor_id,
+            insertData.client_type,
+            insertData.first_name,
+            insertData.last_name,
+            insertData.phone,
+            insertData.email,
+            insertData.budget,
+            insertData.location,
+            insertData.amenities
+          ]
+        );
+      }
+
+      return res.json({ message: 'CSV import completed', count: parsedRows.length });
+    });
+
+    parser.on('error', (err) => {
+      console.error('CSV parser error:', err);
+      return res.status(500).json({ error: 'CSV parse error' });
+    });
+
+    csvStream.pipe(parser);
+
+  } catch (error) {
+    console.error('CSV import error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 app.get('/auth/check', (req, res) => {
@@ -548,7 +644,6 @@ app.get('/auth/check', (req, res) => {
   });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
