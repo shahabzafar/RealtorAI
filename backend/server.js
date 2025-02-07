@@ -555,7 +555,8 @@ app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   return res.json({ link: generatedLink });
 });
 
-const upload = multer({ storage: multer.MemoryStorage() });
+// **CHANGED THIS LINE TO USE lowercase memoryStorage**:
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
   try {
@@ -598,7 +599,7 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
           budget: row[columnMapping.budget] || null,
           location: row[columnMapping.location] || null,
           amenities: row[columnMapping.amenities] || null,
-          // Add fields here
+          // Add fields here if needed
         };
 
         // Insert

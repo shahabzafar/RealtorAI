@@ -1,4 +1,48 @@
 backend:
+package.json:
+"
+{
+  "name": "ai-realtor-backend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.7.7",
+    "bcrypt": "^5.1.1",
+    "connect-redis": "^7.1.1",
+    "cors": "^2.8.5",
+    "csurf": "^1.10.0",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "express-session": "^1.18.1",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.0.0",
+    "multer": "^1.4.5-lts.1",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-instagram": "^1.0.0",
+    "passport-local": "^1.0.0",
+    "passport-microsoft": "^2.1.0",
+    "pg": "^8.13.1",
+    "redis": "^4.7.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "main": "server.js",
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Backend server for AI Realtor app"
+}
+"
+
 server.js:
 "
 const express = require('express');
@@ -651,6 +695,92 @@ app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
 });
+"
+
+
+frontend:
+package.json:
+"
+{
+  "name": "ai-realtor-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.7.7",
+    "papaparse": "^5.5.2",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "react-scripts": "^5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-transform-private-property-in-object": "^7.25.8"
+  },
+  "engines": {
+    "node": "22.11.0"
+  }
+}
+"
+
+
+public:
+manifest.json:
+"
+{
+  "short_name": "React App",
+  "name": "Create React App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
 "
 
 
@@ -2067,14 +2197,15 @@ const CSVImport = () => {
     }
   };
 
+  // Parse only the first 10 lines to get headers
   const parseCsvHeaders = (file) => {
     Papa.parse(file, {
       header: true,
-      preview: 10, // read up to 10 lines for headers
+      preview: 10,
       complete: (results) => {
         if (results.data && results.data.length) {
           setHeaders(results.meta.fields || []);
-          setSampleData(results.data.slice(0, 5)); // store first 5 lines
+          setSampleData(results.data.slice(0, 5)); // show first 5 lines as sample
         }
       },
       error: (err) => {
@@ -2101,8 +2232,9 @@ const CSVImport = () => {
       const res = await fetch('/api/clients/import-csv', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
       });
+
       if (!res.ok) {
         throw new Error('CSV import failed');
       }
@@ -2124,7 +2256,15 @@ const CSVImport = () => {
   };
 
   return (
-    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
+    <div
+      style={{
+        background: '#eee',
+        padding: '1rem',
+        borderRadius: '8px',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+      }}
+    >
       <h2>CSV Import</h2>
       <input
         type="file"
@@ -2161,11 +2301,20 @@ const CSVImport = () => {
           </div>
 
           <h4>Sample Data (first 5 rows)</h4>
-          <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse' }}>
+          <table
+            style={{
+              width: '100%',
+              background: '#fff',
+              borderCollapse: 'collapse',
+            }}
+          >
             <thead>
               <tr>
                 {headers.map((hdr) => (
-                  <th key={hdr} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                  <th
+                    key={hdr}
+                    style={{ border: '1px solid #ccc', padding: '4px' }}
+                  >
                     {hdr}
                   </th>
                 ))}
@@ -2175,7 +2324,10 @@ const CSVImport = () => {
               {sampleData.map((row, idx) => (
                 <tr key={idx}>
                   {headers.map((hdr) => (
-                    <td key={`${idx}-${hdr}`} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                    <td
+                      key={`${idx}-${hdr}`}
+                      style={{ border: '1px solid #ccc', padding: '4px' }}
+                    >
                       {row[hdr]}
                     </td>
                   ))}
@@ -2694,7 +2846,7 @@ function RealtorApp({ user, onLogout }) {
               <i className="fas fa-plus" style={{ fontSize: '18px' }}></i>
               
               {/* Otherwise, you can do plain text:
-              + 
+                +
               */}
             </button>
           </div>
@@ -2722,12 +2874,15 @@ function RealtorApp({ user, onLogout }) {
             <div
               style={{
                 position: 'fixed',
-                top: 0, left: 0, right: 0, bottom: 0,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 backgroundColor: 'rgba(0, 0, 0, 0.5)',
                 zIndex: 9999,
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
               }}
             >
               <div
@@ -2739,7 +2894,7 @@ function RealtorApp({ user, onLogout }) {
                   maxWidth: '90%',
                   maxHeight: '90vh',
                   overflowY: 'auto',
-                  position: 'relative'
+                  position: 'relative',
                 }}
               >
                 <button
