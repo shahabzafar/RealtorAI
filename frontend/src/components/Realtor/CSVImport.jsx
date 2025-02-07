@@ -25,14 +25,15 @@ const CSVImport = () => {
     }
   };
 
+  // Parse only the first 10 lines to get headers
   const parseCsvHeaders = (file) => {
     Papa.parse(file, {
       header: true,
-      preview: 10, // read up to 10 lines for headers
+      preview: 10,
       complete: (results) => {
         if (results.data && results.data.length) {
           setHeaders(results.meta.fields || []);
-          setSampleData(results.data.slice(0, 5)); // store first 5 lines
+          setSampleData(results.data.slice(0, 5)); // show first 5 lines as sample
         }
       },
       error: (err) => {
@@ -59,8 +60,9 @@ const CSVImport = () => {
       const res = await fetch('/api/clients/import-csv', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include',
       });
+
       if (!res.ok) {
         throw new Error('CSV import failed');
       }
@@ -82,7 +84,15 @@ const CSVImport = () => {
   };
 
   return (
-    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
+    <div
+      style={{
+        background: '#eee',
+        padding: '1rem',
+        borderRadius: '8px',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+      }}
+    >
       <h2>CSV Import</h2>
       <input
         type="file"
@@ -119,11 +129,20 @@ const CSVImport = () => {
           </div>
 
           <h4>Sample Data (first 5 rows)</h4>
-          <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse' }}>
+          <table
+            style={{
+              width: '100%',
+              background: '#fff',
+              borderCollapse: 'collapse',
+            }}
+          >
             <thead>
               <tr>
                 {headers.map((hdr) => (
-                  <th key={hdr} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                  <th
+                    key={hdr}
+                    style={{ border: '1px solid #ccc', padding: '4px' }}
+                  >
                     {hdr}
                   </th>
                 ))}
@@ -133,7 +152,10 @@ const CSVImport = () => {
               {sampleData.map((row, idx) => (
                 <tr key={idx}>
                   {headers.map((hdr) => (
-                    <td key={`${idx}-${hdr}`} style={{ border: '1px solid #ccc', padding: '4px' }}>
+                    <td
+                      key={`${idx}-${hdr}`}
+                      style={{ border: '1px solid #ccc', padding: '4px' }}
+                    >
                       {row[hdr]}
                     </td>
                   ))}
