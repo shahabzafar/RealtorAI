@@ -16,10 +16,14 @@ function FormPage() {
   const [propertyImages, setPropertyImages] = useState([]);
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
   const [urgency, setUrgency] = useState('Not specified');
   const [income, setIncome] = useState('');
+
+  // Instead of checkbox for bank loan, we use YES/NO buttons
   const [bankLoanEligibility, setBankLoanEligibility] = useState(false);
 
+  // Down payment
   const [downPayment, setDownPayment] = useState('');
   const [canAffordDownPayment, setCanAffordDownPayment] = useState(false);
 
@@ -31,6 +35,7 @@ function FormPage() {
       setDownPayment('');
       return;
     }
+
     const b = parseFloat(budget);
     if (isNaN(b) || b <= 0) {
       setDownPayment('');
@@ -38,22 +43,19 @@ function FormPage() {
     }
 
     let calculated = 0;
-    // if $500,000 or less => 5%
     if (b <= 500000) {
+      // if $500,000 or less => 5%
       calculated = b * 0.05;
-    }
-    // if $500k to $1.5 million => 5% of first 500k, 10% of remainder
-    else if (b > 500000 && b < 1500000) {
-      const firstPortion = 500000 * 0.05; // 25k
+    } else if (b > 500000 && b < 1500000) {
+      // if $500k to $1.5M => 5% of first 500k, 10% of remainder
+      const firstPortion = 500000 * 0.05; 
       const remainder = b - 500000;
       const secondPortion = remainder * 0.1;
       calculated = firstPortion + secondPortion;
-    }
-    // if $1.5 million or more => 20% of entire price
-    else {
+    } else {
+      // if $1.5M or more => 20%
       calculated = b * 0.2;
     }
-
     setDownPayment(calculated.toFixed(2));
   }, [budget]);
 
@@ -132,9 +134,11 @@ function FormPage() {
   return (
     <div className="form-page-container dark-mode">
       <h1>Contact Form</h1>
-      {!realtorId && <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>}
-
+      {!realtorId && (
+        <p style={{ color: 'red' }}>Warning: No realtor ID found!</p>
+      )}
       <form onSubmit={handleFormSubmit} className="client-form">
+
         {/* First Name */}
         <div className="form-group">
           <label>First Name *</label>
@@ -210,19 +214,28 @@ function FormPage() {
           />
         </div>
 
-        {/* Bank Loan Eligibility */}
-        <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={bankLoanEligibility}
-              onChange={(e) => setBankLoanEligibility(e.target.checked)}
-            />
-            Eligible for Bank Loan?
-          </label>
+        {/* Eligible for Bank Loan? - using yes/no */}
+        <div className="form-group yes-no-buttons">
+          <label>Eligible for Bank Loan?</label>
+          <div className="button-group">
+            <button
+              type="button"
+              className={bankLoanEligibility ? 'selected' : ''}
+              onClick={() => setBankLoanEligibility(true)}
+            >
+              YES
+            </button>
+            <button
+              type="button"
+              className={!bankLoanEligibility ? 'selected' : ''}
+              onClick={() => setBankLoanEligibility(false)}
+            >
+              NO
+            </button>
+          </div>
         </div>
 
-        {/* If buyer, show buyer fields */}
+        {/* Buyer fields if clientType == 'buyer' */}
         {clientType === 'buyer' && (
           <>
             <div className="form-group">
@@ -259,7 +272,7 @@ function FormPage() {
               </div>
             )}
 
-            {/* Instead of a checkbox, do a yes/no button group */}
+            {/* YES/NO for "Can you afford it?" */}
             {downPayment && (
               <div className="form-group yes-no-buttons">
                 <label>Can you afford the above down payment?</label>
@@ -284,13 +297,14 @@ function FormPage() {
           </>
         )}
 
-        {/* If seller, show seller fields */}
+        {/* Seller fields if clientType == 'seller' */}
         {clientType === 'seller' && (
           <>
             <div className="form-group">
               <label>Property Images</label>
               <input type="file" multiple onChange={handleFileChange} />
             </div>
+
             <div className="form-group">
               <label>Property Description / Notes</label>
               <textarea
