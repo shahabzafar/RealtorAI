@@ -38,4 +38,33 @@
 
 .pin-button:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.floating-import-button {
+  position: fixed !important;
+  bottom: 2rem !important;
+  right: 2rem !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background-color: rgb(63, 81, 181) !important;
+  cursor: pointer !important;
+  z-index: 1000 !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.floating-import-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: rgb(63, 81, 181) !important;
+}
+
+.floating-import-button::before,
+.floating-import-button::after {
+  display: none !important;
 } 

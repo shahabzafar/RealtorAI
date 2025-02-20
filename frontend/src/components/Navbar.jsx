@@ -16,11 +16,10 @@ const Navbar = ({ user, onLogout }) => {
     <nav className="navbar">
       <div className="navbar-content">
         <Link to="/" className="navbar-brand">
-          AI Realtor
+          Realtor IQ
         </Link>
         <div className="nav-links">
           <Link to="/">Home</Link>
-          <Link to="/buy">Buy</Link>
           <Link to="/realtor">Realtor</Link>
           {user ? (
             <div className="user-menu">

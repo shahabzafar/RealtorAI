@@ -16,6 +16,8 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const csvParser = require('csv-parse');
 const stream = require('stream');
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -521,9 +523,6 @@ app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   return res.json({ link: generatedLink });
 });
 
-// Use memoryStorage for multer uploads
-const upload = multer({ storage: multer.memoryStorage() });
-
 app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No CSV file uploaded' });
@@ -595,6 +594,51 @@ app.get('/auth/check', (req, res) => {
     user: req.user,
     session: req.session
   });
+});
+
+app.post('/api/realtor/profile-image', ensureAuthenticated, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const updateQuery = `
+      UPDATE realtors
+      SET profile_image = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING profile_image
+    `;
+
+    const result = await pool.query(updateQuery, [req.file.buffer, req.user.id]);
+    
+    res.json({ 
+      message: 'Profile image updated successfully',
+      imageUrl: `/api/realtor/${req.user.id}/profile-image`
+    });
+  } catch (error) {
+    console.error('Error updating profile image:', error);
+    res.status(500).json({ error: 'Failed to update profile image' });
+  }
+});
+
+app.get('/api/realtor/:id/profile-image', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT profile_image FROM realtors WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (!result.rows[0]?.profile_image) {
+      return res.status(404).send('No image found');
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.send(result.rows[0].profile_image);
+  } catch (error) {
+    console.error('Error serving profile image:', error);
+    res.status(500).send('Error retrieving image');
+  }
 });
 
 app.listen(PORT, () => {

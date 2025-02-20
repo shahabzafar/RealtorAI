@@ -87,26 +87,10 @@ function RealtorApp({ user, onLogout }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3>Clients</h3>
             <button
-              style={{
-                backgroundColor: '#3f51b5',
-                color: 'white',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className="import-client-button"
               onClick={() => setShowCsvImport(true)}
             >
-              {/* If you have Font Awesome loaded, use an icon: */}
-              <i className="fas fa-plus" style={{ fontSize: '18px' }}></i>
-              
-              {/* Otherwise, you can do plain text:
-                +
-              */}
+              <i className="fas fa-plus"></i>
             </button>
           </div>
 

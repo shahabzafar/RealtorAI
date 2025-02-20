@@ -39,14 +39,43 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
   // When user chooses a platform
   const handleSocialClick = (platform) => {
     setSelectedPlatform(platform);
-    // Generate a default post message
     const defaultMessage = `Hey everyone, it's ${realtorFullName}! If you or anyone you know is looking to buy or sell, please fill out my client acquisition form here: ${formLink}`;
     setPostMessage(defaultMessage);
   };
 
   const handlePostToSocial = () => {
-    alert(`Posted to ${selectedPlatform} with message:\n\n${postMessage}\n\n(Real integration not implemented)`);
-    // reset
+    let shareUrl = '';
+    
+    switch(selectedPlatform) {
+      case 'Facebook':
+        // Copy message to clipboard and open Facebook share dialog
+        navigator.clipboard.writeText(postMessage);
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(formLink)}`;
+        alert('Message copied to clipboard! Please paste it in your Facebook post.');
+        break;
+      
+      case 'Instagram':
+        navigator.clipboard.writeText(postMessage);
+        shareUrl = 'https://instagram.com';
+        alert('Message copied to clipboard! Please paste it in your Instagram post.');
+        break;
+      
+      case 'LinkedIn':
+        // Keep the original LinkedIn sharing with pre-populated content
+        const linkedInText = `${postMessage}\n\nFill out the form here: ${formLink}`;
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?` +
+          `url=${encodeURIComponent(formLink)}` +
+          `&title=${encodeURIComponent('Client Acquisition Form')}` +
+          `&text=${encodeURIComponent(linkedInText)}` +
+          `&source=${encodeURIComponent(window.location.origin)}`;
+        break;
+    }
+
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=600,scrollbars=yes');
+    }
+
+    // Reset and close overlay
     setSelectedPlatform('');
     setPostMessage('');
     toggleShareOverlay();
@@ -92,13 +121,25 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
                   </button>
                 </div>
                 <div className="social-buttons">
-                  <button className="share-option" onClick={() => handleSocialClick('Facebook')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="Facebook"
+                    onClick={() => handleSocialClick('Facebook')}
+                  >
                     <i className="fab fa-facebook"></i> Facebook
                   </button>
-                  <button className="share-option" onClick={() => handleSocialClick('Instagram')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="Instagram"
+                    onClick={() => handleSocialClick('Instagram')}
+                  >
                     <i className="fab fa-instagram"></i> Instagram
                   </button>
-                  <button className="share-option" onClick={() => handleSocialClick('LinkedIn')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="LinkedIn"
+                    onClick={() => handleSocialClick('LinkedIn')}
+                  >
                     <i className="fab fa-linkedin"></i> LinkedIn
                   </button>
                 </div>

@@ -268,4 +268,32 @@ button:hover {
 .section-content {
   max-width: 1440px;
   margin: 0 auto;
+}
+
+/* Add this to your existing RealtorApp.css */
+.import-client-button {
+  background-color: rgb(63, 81, 181) !important;
+  color: white !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.import-client-button:hover {
+  transform: none !important;
+  background-color: rgb(63, 81, 181) !important;
+  box-shadow: none !important;
+}
+
+.import-client-button i {
+  font-size: 18px !important;
 } 
