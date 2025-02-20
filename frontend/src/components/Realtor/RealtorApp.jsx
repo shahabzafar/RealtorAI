@@ -162,13 +162,14 @@ function RealtorApp({ user, onLogout }) {
 
         <PerformanceOverview />
         <GeneratedLeads />
-
-        <div className="ai-chat-container">
-          <AiChat />
-        </div>
         <Carousel />
       </div>
 
+      {/* Move AiChat outside dashboard-content and Footer */}
+      <div className="ai-chat-container">
+        <AiChat />
+      </div>
+      
       <Footer />
     </div>
   );
