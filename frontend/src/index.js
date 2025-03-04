@@ -5,7 +5,7 @@ import App from './App';
 
 import './styles/Home/global.css';
 
-const isProd = (process.env.REACT_APP_NODE_ENV === 'production');
+const isProd = (process.env.NODE_ENV === 'production');
 const backendUrl = isProd
   ? process.env.REACT_APP_BACKEND_URL || 'https://realtoriqbackend.onrender.com'
   : 'http://localhost:5000';
@@ -14,7 +14,7 @@ const backendUrl = isProd
 axios.defaults.baseURL = backendUrl;
 axios.defaults.withCredentials = true;
 
-console.log('React Environment:', process.env.REACT_APP_NODE_ENV);
+console.log('React Environment:', process.env.NODE_ENV);
 console.log('Using Backend URL:', axios.defaults.baseURL);
 
 ReactDOM.render(
