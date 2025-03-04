@@ -8,6 +8,9 @@ const SignIn = ({ setUser }) => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  // Debugging statement
+  console.log(process.env.BACKEND_URL)
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
