@@ -7,7 +7,7 @@ import './styles/Home/global.css';
 
 const isProd = (process.env.REACT_APP_NODE_ENV === 'production');
 const backendUrl = isProd
-  ? process.env.REACT_APP_BACKEND_URL || 'https://realtoriqbackend.onrender.com'
+  ? process.env.BACKEND_URL || 'https://realtoriqbackend.onrender.com'
   : 'http://localhost:5000';
 
 // Set default axios configuration for the frontend
