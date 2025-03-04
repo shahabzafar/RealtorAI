@@ -8,8 +8,7 @@ const SignIn = ({ setUser }) => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Debugging statement
-  console.log(process.env.BACKEND_URL)
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +30,7 @@ const SignIn = ({ setUser }) => {
 
   const handleGoogleLogin = () => {
     // Use the environment variable
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
     window.location.href = `${backendUrl}/auth/google`;
   };
 
