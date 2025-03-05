@@ -531,8 +531,8 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
   // Safely parse mapping (it might already be an object)
   let columnMapping = {};
   try {
-    columnMapping = (typeof req.body.mapping === "string") 
-      ? JSON.parse(req.body.mapping) 
+    columnMapping = (typeof req.body.mapping === "string")
+      ? JSON.parse(req.body.mapping)
       : req.body.mapping;
   } catch(e) {
     console.error('Error parsing mapping:', e);
@@ -540,10 +540,12 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
   }
 
   try {
+    // Parse CSV and trim header names
     const records = await new Promise((resolve, reject) => {
       const parsedRows = [];
+      // Use a function to trim header names
       const parser = csvParser({
-        columns: true,
+        columns: header => header.map(col => col.trim()),
         skip_empty_lines: true
       });
       parser.on('readable', () => {
@@ -552,8 +554,14 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
           parsedRows.push(record);
         }
       });
-      parser.on('error', err => reject(err));
-      parser.on('end', () => resolve(parsedRows));
+      parser.on('error', err => {
+        console.error('CSV parsing error:', err);
+        reject(err);
+      });
+      parser.on('end', () => {
+        console.log('Parsed CSV records:', parsedRows);
+        resolve(parsedRows);
+      });
       
       // Create a readable stream from the CSV buffer
       const csvStream = stream.Readable.from([req.file.buffer]);
@@ -561,10 +569,11 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
     });
   
     let importedCount = 0;
+    // Loop through each parsed record
     for (const row of records) {
       // Convert the budget field to a number (if present)
       const rawBudget = row[columnMapping.budget];
-      const parsedBudget = rawBudget 
+      const parsedBudget = rawBudget
         ? parseFloat(rawBudget.replace(/[^0-9.]/g, ''))
         : null;
       
@@ -607,10 +616,11 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
   
     return res.json({ message: 'CSV import completed', count: importedCount });
   } catch (error) {
-    console.error('CSV import error:', error);
+    console.error('CSV import overall error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 app.get('/auth/check', (req, res) => {
