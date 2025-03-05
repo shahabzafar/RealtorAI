@@ -5,18 +5,18 @@ import FeaturedProperties from './FeaturedProperties';
 import Services from './Services';
 import AiChat from './AiChat';
 import RealEstateTrends from './RealEstateTrends';
-// Removed ContactUs import temporarily
+import InteractiveGraphs from './InteractiveGraphs';
 
-const HomeApp = () => {
+const HomeApp = ({ user, onLogout }) => {
   return (
     <div>
-      <Navbar />
+      <Navbar user={user} onLogout={onLogout} />
       <Hero />
       <FeaturedProperties />
       <Services />
+      <InteractiveGraphs />
       <AiChat />
       <RealEstateTrends />
-      {/* Removed ContactUs component temporarily */}
     </div>
   );
 };

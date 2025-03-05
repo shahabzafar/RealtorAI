@@ -63,9 +63,10 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const csvParser = require('csv-parse');
 const stream = require('stream');
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// Pick the URLs from the environment or default to localhost if dev
-const isProd = (process.env.NODE_ENV === 'production');
+const isProd = process.env.NODE_ENV === 'production';
 
 const FRONTEND_URL = isProd
   ? process.env.FRONTEND_URL || 'https://realtoriq.onrender.com'
@@ -75,7 +76,6 @@ const BACKEND_URL = isProd
   ? process.env.BACKEND_URL || 'https://realtoriqbackend.onrender.com'
   : 'http://localhost:5000';
 
-// Log environment info
 console.log('Current NODE_ENV:', process.env.NODE_ENV);
 console.log('Frontend URL:', FRONTEND_URL);
 console.log('Backend URL:', BACKEND_URL);
@@ -83,19 +83,16 @@ console.log('Backend URL:', BACKEND_URL);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(helmet());
 app.use(express.json());
-app.set('trust proxy', 1); // trust first proxy
+app.set('trust proxy', 1);
 
-// Rate limit (basic example)
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 100
 });
 app.use(limiter);
 
-// Update CORS configuration
 app.use(
   cors({
     origin: FRONTEND_URL,
@@ -105,15 +102,11 @@ app.use(
   })
 );
 
-// For any preflight requests on form route
 app.options('/api/form/:realtorId', cors());
 
-// Database Pool Configuration
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {
@@ -121,7 +114,6 @@ pool.on('error', (err) => {
   console.error('Using DATABASE_URL:', process.env.DATABASE_URL);
 });
 
-// Test database connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Error testing database connection:', err);
@@ -130,7 +122,6 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// Session config
 const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'someSecret',
   resave: false,
@@ -139,7 +130,7 @@ const sessionConfig = {
     secure: isProd,
     httpOnly: true,
     sameSite: isProd ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000
   },
   proxy: true
 };
@@ -149,10 +140,12 @@ if (isProd && process.env.REDIS_URL) {
     url: process.env.REDIS_URL
   });
   redisClient.connect().catch(console.error);
-  redisClient.on('connect', () => console.log('Connected to Redis successfully.'));
-  redisClient.on('error', (err) => console.error('Redis connection error:', err));
-
-  // Use Redis store in production
+  redisClient.on('connect', () =>
+    console.log('Connected to Redis successfully.')
+  );
+  redisClient.on('error', (err) =>
+    console.error('Redis connection error:', err)
+  );
   sessionConfig.store = new RedisStore({ client: redisClient });
 }
 
@@ -163,7 +156,10 @@ app.use(passport.session());
 // Database Helper Functions
 async function findRealtorByGoogleId(googleId) {
   try {
-    const result = await pool.query('SELECT * FROM realtors WHERE google_id = $1', [googleId]);
+    const result = await pool.query(
+      'SELECT * FROM realtors WHERE google_id = $1',
+      [googleId]
+    );
     return result.rows[0];
   } catch (error) {
     console.error('Error in findRealtorByGoogleId:', error);
@@ -205,7 +201,6 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         console.log("Google profile:", profile);
-        
         let realtor = await findRealtorByGoogleId(profile.id);
         if (!realtor) {
           realtor = await createRealtor({
@@ -247,7 +242,6 @@ passport.use(
   })
 );
 
-// Serialize / Deserialize
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
@@ -286,28 +280,19 @@ app.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
     const { firstName, lastName, email, password, phoneNumber } = req.body;
-
     try {
-      // Check if email exists
       const existingUser = await pool.query('SELECT * FROM realtors WHERE email = $1', [email]);
       if (existingUser.rows.length > 0) {
         return res.status(400).json({ message: 'Email already in use.' });
       }
-
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create new realtor
       const result = await pool.query(
         `INSERT INTO realtors (first_name, last_name, email, password, phone_number, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
         [firstName, lastName, email, hashedPassword, phoneNumber]
       );
       const newRealtor = result.rows[0];
-
-      // Auto-login
       req.login(newRealtor, (err) => {
         if (err) return next(err);
         res.json({
@@ -360,16 +345,13 @@ app.post('/auth/login', [body('email').isEmail(), body('password').exists()],
 
 app.get(
   '/auth/google',
-  passport.authenticate('google', {
-    scope: ['profile', 'email']
-  })
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 app.get(
   '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    // Redirect to frontend after successful Google login
     res.redirect(`${FRONTEND_URL}/main`);
   }
 );
@@ -414,13 +396,11 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-// Helper: check if user is authenticated
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) return next();
   return res.status(401).json({ message: 'Unauthorized' });
 }
 
-// Client (Buyer/Seller) Form Endpoints
 app.post('/api/form/:realtorId', async (req, res) => {
   const realtorId = req.params.realtorId;
   const {
@@ -440,7 +420,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
     downPayment,
     canAffordDownPayment
   } = req.body;
-
   try {
     const insertQuery = `
       INSERT INTO clients
@@ -453,7 +432,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
          $12, $13, $14, $15, $16)
       RETURNING *
     `;
-
     const values = [
       realtorId,
       clientType,
@@ -472,7 +450,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
       downPayment || null,
       canAffordDownPayment === true
     ];
-
     const result = await pool.query(insertQuery, values);
     return res.json({
       message: 'Form submitted successfully',
@@ -484,7 +461,6 @@ app.post('/api/form/:realtorId', async (req, res) => {
   }
 });
 
-// Get all clients for a specific realtor
 app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   try {
     const query = `
@@ -500,7 +476,6 @@ app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Pin/Unpin a client
 app.put('/api/clients/:clientId/pin', ensureAuthenticated, async (req, res) => {
   const { clientId } = req.params;
   const { pinned } = req.body;
@@ -538,14 +513,10 @@ app.put(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
     const { firstName, lastName, email, phoneNumber, password } = req.body;
-
     try {
       const realtor = await findRealtorById(req.user.id);
       if (!realtor) return res.status(404).json({ error: 'User not found' });
-
-      // If Google-based account has no local password, block local password changes
       let hashedPassword = null;
       if (realtor.google_id && realtor.password == null && password) {
         return res
@@ -555,7 +526,6 @@ app.put(
       if (password && !realtor.google_id) {
         hashedPassword = await bcrypt.hash(password, 10);
       }
-
       const updateQuery = `
         UPDATE realtors
         SET
@@ -576,10 +546,8 @@ app.put(
         hashedPassword || null,
         req.user.id
       ];
-
       const { rows } = await pool.query(updateQuery, values);
       const updatedRealtor = rows[0];
-
       return res.json({
         message: 'Settings updated',
         user: {
@@ -602,82 +570,65 @@ app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   return res.json({ link: generatedLink });
 });
 
-// **CHANGED THIS LINE TO USE lowercase memoryStorage**:
-const upload = multer({ storage: multer.memoryStorage() });
-
 app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
+  
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No CSV file uploaded' });
-    }
+    const records = await new Promise((resolve, reject) => {
+      const parsedRows = [];
+      const parser = csvParser({
+        columns: true,
+        skip_empty_lines: true
+      });
+      parser.on('readable', () => {
+        let record;
+        while ((record = parser.read()) !== null) {
+          parsedRows.push(record);
+        }
+      });
+      parser.on('error', err => reject(err));
+      parser.on('end', () => resolve(parsedRows));
+      
+      const csvStream = stream.Readable.from([req.file.buffer]);
+      csvStream.pipe(parser);
 
-    // Mappings from client side
-    const columnMapping = req.body.mapping ? JSON.parse(req.body.mapping) : {};
-
-    // Parse the CSV
-    const csvStream = new stream.Readable();
-    csvStream.push(req.file.buffer);
-    csvStream.push(null);
-
-    let parsedRows = [];
-    const parser = csvParser({
-      columns: true, // treat first row as header
-      skip_empty_lines: true
     });
-
-    parser.on('readable', () => {
-      let record;
-      while ((record = parser.read()) !== null) {
-        parsedRows.push(record);
-      }
-    });
-
-    parser.on('end', async () => {
-      // Now insert each row
-      for (const row of parsedRows) {
-        // Build an insert object based on the columnMapping
-        const insertData = {
-          realtor_id: req.user.id,
-          client_type: row[columnMapping.clientType] || 'buyer', // default
-          first_name: row[columnMapping.firstName] || 'Unknown',
-          last_name: row[columnMapping.lastName] || 'Unknown',
-          phone: row[columnMapping.phone] || null,
-          email: row[columnMapping.email] || null,
-          budget: row[columnMapping.budget] || null,
-          location: row[columnMapping.location] || null,
-          amenities: row[columnMapping.amenities] || null,
-          // Add fields here if needed
-        };
-
-        // Insert
-        await pool.query(
-          `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
+  
+    for (const row of records) {
+      const insertData = {
+        realtor_id: req.user.id,
+        client_type: (row[columnMapping.clientType] || 'buyer').toLowerCase(),
+        first_name: row[columnMapping.firstName] || 'Unknown',
+        last_name: row[columnMapping.lastName] || 'Unknown',
+        phone: row[columnMapping.phone] || null,
+        email: row[columnMapping.email] || null,
+        budget: row[columnMapping.budget] || null,
+        location: row[columnMapping.location] || null,
+        amenities: row[columnMapping.amenities] || null,
+      };
+  
+      await pool.query(
+        `INSERT INTO clients (realtor_id, client_type, first_name, last_name, phone, email,
                                 budget, location, amenities, pinned, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false, NOW())`,
-          [
-            insertData.realtor_id,
-            insertData.client_type,
-            insertData.first_name,
-            insertData.last_name,
-            insertData.phone,
-            insertData.email,
-            insertData.budget,
-            insertData.location,
-            insertData.amenities
-          ]
-        );
-      }
-
-      return res.json({ message: 'CSV import completed', count: parsedRows.length });
-    });
-
-    parser.on('error', (err) => {
-      console.error('CSV parser error:', err);
-      return res.status(500).json({ error: 'CSV parse error' });
-    });
-
-    csvStream.pipe(parser);
-
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW())`,
+        [
+          insertData.realtor_id,
+          insertData.client_type,
+          insertData.first_name,
+          insertData.last_name,
+          insertData.phone,
+          insertData.email,
+          insertData.budget,
+          insertData.location,
+          insertData.amenities
+        ]
+      );
+    }
+  
+    return res.json({ message: 'CSV import completed', count: records.length });
   } catch (error) {
     console.error('CSV import error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -690,6 +641,51 @@ app.get('/auth/check', (req, res) => {
     user: req.user,
     session: req.session
   });
+});
+
+app.post('/api/realtor/profile-image', ensureAuthenticated, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const updateQuery = `
+      UPDATE realtors
+      SET profile_image = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING profile_image
+    `;
+
+    const result = await pool.query(updateQuery, [req.file.buffer, req.user.id]);
+    
+    res.json({ 
+      message: 'Profile image updated successfully',
+      imageUrl: `/api/realtor/${req.user.id}/profile-image`
+    });
+  } catch (error) {
+    console.error('Error updating profile image:', error);
+    res.status(500).json({ error: 'Failed to update profile image' });
+  }
+});
+
+app.get('/api/realtor/:id/profile-image', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT profile_image FROM realtors WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (!result.rows[0]?.profile_image) {
+      return res.status(404).send('No image found');
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.send(result.rows[0].profile_image);
+  } catch (error) {
+    console.error('Error serving profile image:', error);
+    res.status(500).send('Error retrieving image');
+  }
 });
 
 app.listen(PORT, () => {
@@ -900,7 +896,7 @@ import App from './App';
 
 import './styles/Home/global.css';
 
-const isProd = (process.env.REACT_APP_NODE_ENV === 'production');
+const isProd = (process.env.NODE_ENV === 'production');
 const backendUrl = isProd
   ? process.env.REACT_APP_BACKEND_URL || 'https://realtoriqbackend.onrender.com'
   : 'http://localhost:5000';
@@ -909,7 +905,7 @@ const backendUrl = isProd
 axios.defaults.baseURL = backendUrl;
 axios.defaults.withCredentials = true;
 
-console.log('React Environment:', process.env.REACT_APP_NODE_ENV);
+console.log('React Environment:', process.env.NODE_ENV);
 console.log('Using Backend URL:', axios.defaults.baseURL);
 
 ReactDOM.render(
@@ -942,11 +938,10 @@ const Navbar = ({ user, onLogout }) => {
     <nav className="navbar">
       <div className="navbar-content">
         <Link to="/" className="navbar-brand">
-          AI Realtor
+          Realtor IQ
         </Link>
         <div className="nav-links">
           <Link to="/">Home</Link>
-          <Link to="/buy">Buy</Link>
           <Link to="/realtor">Realtor</Link>
           {user ? (
             <div className="user-menu">
@@ -1002,6 +997,8 @@ const SignIn = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2104,24 +2101,19 @@ ClientCard.jsx:
 import React from 'react';
 import '../../styles/Realtor/ClientCard.css';
 
-const ClientCard = ({ client, onSelect, onPinToggle }) => {
+const ClientCard = ({ client, onSelect }) => {
   return (
     <div className="client-card">
       <div className="client-header">
         <strong>
           {client.first_name} {client.last_name}
         </strong>
-        <button
-          className="pin-button"
-          onClick={() => onPinToggle(client.id, client.pinned)}
-        >
-          {client.pinned ? 'Unpin' : 'Pin'}
-        </button>
       </div>
       <div onClick={() => onSelect(client)} className="client-body">
         <p>{client.client_type === 'seller' ? 'Seller' : 'Buyer'}</p>
         <p>Created: {new Date(client.created_at).toLocaleString()}</p>
       </div>
+      <div className="floating-import-button" onClick={() => onSelect(client)} />
     </div>
   );
 };
@@ -2181,14 +2173,14 @@ const CSVImport = () => {
 
   // The user selects which CSV column corresponds to each required field
   const [mapping, setMapping] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    clientType: '',
-    budget: '',
-    location: '',
-    amenities: ''
+    firstName: "firstName",
+    lastName: "lastName",
+    phone: "phone",
+    email: "email",
+    clientType: "clientType",
+    budget: "budget",
+    location: "location",
+    amenities: "amenities"
   });
 
   // Set the backend URL from environment variable or default value
@@ -2361,14 +2353,43 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
   // When user chooses a platform
   const handleSocialClick = (platform) => {
     setSelectedPlatform(platform);
-    // Generate a default post message
     const defaultMessage = `Hey everyone, it's ${realtorFullName}! If you or anyone you know is looking to buy or sell, please fill out my client acquisition form here: ${formLink}`;
     setPostMessage(defaultMessage);
   };
 
   const handlePostToSocial = () => {
-    alert(`Posted to ${selectedPlatform} with message:\n\n${postMessage}\n\n(Real integration not implemented)`);
-    // reset
+    let shareUrl = '';
+    
+    switch(selectedPlatform) {
+      case 'Facebook':
+        // Copy message to clipboard and open Facebook share dialog
+        navigator.clipboard.writeText(postMessage);
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(formLink)}`;
+        alert('Message copied to clipboard! Please paste it in your Facebook post.');
+        break;
+      
+      case 'Instagram':
+        navigator.clipboard.writeText(postMessage);
+        shareUrl = 'https://instagram.com';
+        alert('Message copied to clipboard! Please paste it in your Instagram post.');
+        break;
+      
+      case 'LinkedIn':
+        // Keep the original LinkedIn sharing with pre-populated content
+        const linkedInText = `${postMessage}\n\nFill out the form here: ${formLink}`;
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?` +
+          `url=${encodeURIComponent(formLink)}` +
+          `&title=${encodeURIComponent('Client Acquisition Form')}` +
+          `&text=${encodeURIComponent(linkedInText)}` +
+          `&source=${encodeURIComponent(window.location.origin)}`;
+        break;
+    }
+
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=600,scrollbars=yes');
+    }
+
+    // Reset and close overlay
     setSelectedPlatform('');
     setPostMessage('');
     toggleShareOverlay();
@@ -2414,13 +2435,25 @@ const FormLinkGenerator = ({ user, generatedLink, onGenerateLink }) => {
                   </button>
                 </div>
                 <div className="social-buttons">
-                  <button className="share-option" onClick={() => handleSocialClick('Facebook')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="Facebook"
+                    onClick={() => handleSocialClick('Facebook')}
+                  >
                     <i className="fab fa-facebook"></i> Facebook
                   </button>
-                  <button className="share-option" onClick={() => handleSocialClick('Instagram')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="Instagram"
+                    onClick={() => handleSocialClick('Instagram')}
+                  >
                     <i className="fab fa-instagram"></i> Instagram
                   </button>
-                  <button className="share-option" onClick={() => handleSocialClick('LinkedIn')}>
+                  <button 
+                    className="share-option" 
+                    data-platform="LinkedIn"
+                    onClick={() => handleSocialClick('LinkedIn')}
+                  >
                     <i className="fab fa-linkedin"></i> LinkedIn
                   </button>
                 </div>
@@ -2802,26 +2835,10 @@ function RealtorApp({ user, onLogout }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3>Clients</h3>
             <button
-              style={{
-                backgroundColor: '#3f51b5',
-                color: 'white',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className="import-client-button"
               onClick={() => setShowCsvImport(true)}
             >
-              {/* If you have Font Awesome loaded, use an icon: */}
-              <i className="fas fa-plus" style={{ fontSize: '18px' }}></i>
-              
-              {/* Otherwise, you can do plain text:
-                +
-              */}
+              <i className="fas fa-plus"></i>
             </button>
           </div>
 
@@ -2893,13 +2910,14 @@ function RealtorApp({ user, onLogout }) {
 
         <PerformanceOverview />
         <GeneratedLeads />
-
-        <div className="ai-chat-container">
-          <AiChat />
-        </div>
         <Carousel />
       </div>
 
+      {/* Move AiChat outside dashboard-content and Footer */}
+      <div className="ai-chat-container">
+        <AiChat />
+      </div>
+      
       <Footer />
     </div>
   );
@@ -2910,15 +2928,92 @@ export default RealtorApp;
 
 RealtorProfileHeader.jsx:
 "
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import '../../styles/Realtor/RealtorProfileHeader.css';
 
 const RealtorProfileHeader = ({ user }) => {
+  const [profileImage, setProfileImage] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    // Check if user exists and has an ID before trying to fetch image
+    if (user?.id) {
+      fetchProfileImage();
+    }
+  }, [user]);
+
+  const fetchProfileImage = async () => {
+    try {
+      const response = await axios.get(`/api/realtor/${user.id}/profile-image`, {
+        responseType: 'blob'
+      });
+      const imageUrl = URL.createObjectURL(response.data);
+      setProfileImage(imageUrl);
+      setImageError(false);
+    } catch (error) {
+      console.error('Error fetching profile image:', error);
+      setImageError(true);
+    }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      await axios.post('/api/realtor/profile-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      // Fetch the updated image
+      await fetchProfileImage();
+    } catch (error) {
+      console.error('Error uploading profile image:', error);
+      setImageError(true);
+    }
+  };
+
+  const handleImageLoadError = () => {
+    setImageError(true);
+  };
+
   return (
     <section className="realtor-profile-header">
       <div className="profile-info">
-        <div className="profile-image">
-          <div className="circle-placeholder"></div>
+        <div className="profile-image" onClick={handleImageClick}>
+          {!imageError && profileImage ? (
+            <img 
+              src={profileImage}
+              alt="Profile" 
+              className="profile-photo"
+              onError={handleImageLoadError}
+            />
+          ) : (
+            <div className="circle-placeholder">
+              {user?.firstName?.[0]?.toUpperCase() || 'U'}
+            </div>
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+          <div className="image-overlay">
+            <span>Update Photo</span>
+          </div>
         </div>
         <div className="profile-text">
           <h2>{user ? `${user.firstName} ${user.lastName}` : 'User Name'}</h2>
@@ -3042,19 +3137,17 @@ body {
 Navbar.css:
 "
 .navbar {
-  width: 100%;
-  background-color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 1rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  margin: 0;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .navbar-content {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   width: 100%;
   margin: 0;
@@ -3062,30 +3155,51 @@ Navbar.css:
 
 .navbar-brand {
   font-size: 1.5rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: bold;
+  color: #1a1a1a; /* Changed to black */
   text-decoration: none;
+  margin-right: auto;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
+  margin-right: 1.5rem;
 }
 
 .nav-links a {
-  color: #1a1a1a;
+  color: #333;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
 .nav-links a:hover {
-  color: var(--primary-color);
+  color: rgb(0, 102, 255); /* Keeping hover effect blue */
+}
+
+.profile-dropdown {
+  position: relative;
+  margin-left: 2rem;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #333;
+  font-weight: 500;
 }
 
 .user-menu {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .user-menu-button {
@@ -3100,6 +3214,10 @@ Navbar.css:
   gap: 8px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-menu-button:hover {
@@ -3108,6 +3226,10 @@ Navbar.css:
 
 .user-name {
   font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-arrow {
@@ -3148,13 +3270,25 @@ Navbar.css:
   }
   
   .nav-links {
-    gap: 15px;
+    gap: 1rem;
+    margin-right: 1rem;
+  }
+  
+  .profile-dropdown {
+    margin-left: 1rem;
   }
   
   .nav-links a {
     font-size: 16px;
   }
-} 
+  
+  .user-name {
+    max-width: 100px;
+  }
+}
+
+/* Add this in the head of your HTML to import the font */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap'); 
 "
 
 
@@ -4799,6 +4933,35 @@ ClientCard.css:
 
 .pin-button:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.floating-import-button {
+  position: fixed !important;
+  bottom: 2rem !important;
+  right: 2rem !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background-color: rgb(63, 81, 181) !important;
+  cursor: pointer !important;
+  z-index: 1000 !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.floating-import-button:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: rgb(63, 81, 181) !important;
+}
+
+.floating-import-button::before,
+.floating-import-button::after {
+  display: none !important;
 } 
 "
 
@@ -5070,6 +5233,9 @@ FormLinkGenerator.css:
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Header with close button */
@@ -5089,27 +5255,101 @@ FormLinkGenerator.css:
 /* Social share buttons in a row */
 .social-buttons {
   display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
 }
 
-/* The message editor for customizing the post */
-.message-editor textarea {
-  width: 100%;
-  height: 80px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0.5rem;
-  resize: none;
-  outline: none;
-  font-size: 0.95rem;
+.social-buttons button {
+  flex: 1;
+  min-width: 100px;
+  max-width: 150px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+/* Platform-specific colors */
+.share-option[data-platform="Facebook"] {
+  background-color: #1877f2;
+  color: white;
+}
+
+.share-option[data-platform="Instagram"] {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: white;
+}
+
+.share-option[data-platform="LinkedIn"] {
+  background-color: #0077b5;
+  color: white;
 }
 
 .post-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
+}
+
+.post-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.post-buttons button:first-child {
+  background-color: #0066ff;
+  color: white;
+}
+
+.post-buttons button:last-child {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.post-buttons button:hover {
+  opacity: 0.9;
+}
+
+/* Message editor area */
+.message-editor {
+  margin-top: 1rem;
+}
+
+.message-editor textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  resize: vertical;
+}
+
+/* Media queries for better responsiveness */
+@media (max-width: 480px) {
+  .share-overlay-content {
+    padding: 1rem;
+    width: 95%;
+    margin: 10px;
+  }
+
+  .social-buttons button {
+    min-width: 80px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
 }
 "
 
@@ -5882,6 +6122,34 @@ button:hover {
 .section-content {
   max-width: 1440px;
   margin: 0 auto;
+}
+
+/* Add this to your existing RealtorApp.css */
+.import-client-button {
+  background-color: rgb(63, 81, 181) !important;
+  color: white !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.import-client-button:hover {
+  transform: none !important;
+  background-color: rgb(63, 81, 181) !important;
+  box-shadow: none !important;
+}
+
+.import-client-button i {
+  font-size: 18px !important;
 } 
 "
 
@@ -5906,12 +6174,57 @@ RealtorProfileHeader.css:
   gap: 2rem;
 }
 
-.profile-image .circle-placeholder {
+.profile-image {
+  position: relative;
+  cursor: pointer;
+}
+
+.profile-image:hover .image-overlay {
+  opacity: 1;
+}
+
+.profile-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border-color);
+}
+
+.circle-placeholder {
   width: 80px;
   height: 80px;
   border-radius: 50%;
   background: var(--primary-color);
   border: 3px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-overlay span {
+  color: white;
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0.5rem;
 }
 
 .profile-text h2 {
