@@ -14,7 +14,8 @@ const helmet = require('helmet');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 const multer = require('multer');
-const csvParser = require('csv-parse');
+// FIX: Destructure the "parse" function from csv-parse
+const { parse } = require('csv-parse');
 const stream = require('stream');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -435,10 +436,10 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
   try {
     // Convert the file buffer to a UTF-8 string
     const csvContent = req.file.buffer.toString('utf-8');
-    // Parse CSV and trim header names
+    // Parse CSV and trim header names using the "parse" function
     const records = await new Promise((resolve, reject) => {
       const parsedRows = [];
-      const parser = csvParser({
+      const parser = parse({
         columns: header => header.map(col => col.trim()),
         skip_empty_lines: true
       });
@@ -650,6 +651,7 @@ app.post('/api/realtor/profile-image', ensureAuthenticated, upload.single('image
 
 app.get('/api/realtor/:id/profile-image', async (req, res) => {
   try {
+    // NOTE: Ensure your realtors table includes a "profile_image" column of type bytea.
     const result = await pool.query(
       'SELECT profile_image FROM realtors WHERE id = $1',
       [req.params.id]
