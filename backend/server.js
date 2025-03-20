@@ -414,6 +414,105 @@ app.post('/api/form/:realtorId', async (req, res) => {
   }
 });
 
+// CSV Import endpoint – fixed version
+app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file uploaded' });
+  }
+  
+  // Safely parse mapping (it might already be an object)
+  let columnMapping = {};
+  try {
+    console.log('Received mapping:', req.body.mapping);
+    columnMapping = typeof req.body.mapping === "string"
+      ? JSON.parse(req.body.mapping)
+      : req.body.mapping;
+  } catch(e) {
+    console.error('Error parsing mapping:', e);
+    return res.status(400).json({ error: 'Invalid mapping data' });
+  }
+
+  try {
+    // Convert the file buffer to a UTF-8 string
+    const csvContent = req.file.buffer.toString('utf-8');
+    // Parse CSV and trim header names
+    const records = await new Promise((resolve, reject) => {
+      const parsedRows = [];
+      const parser = csvParser({
+        columns: header => header.map(col => col.trim()),
+        skip_empty_lines: true
+      });
+      parser.on('readable', () => {
+        let record;
+        while ((record = parser.read()) !== null) {
+          parsedRows.push(record);
+        }
+      });
+      parser.on('error', err => {
+        console.error('CSV parsing error:', err);
+        reject(err);
+      });
+      parser.on('end', () => {
+        console.log('Parsed CSV records:', parsedRows);
+        resolve(parsedRows);
+      });
+      
+      // Create a readable stream from the CSV string
+      const csvStream = stream.Readable.from([csvContent]);
+      csvStream.pipe(parser);
+    });
+  
+    let importedCount = 0;
+    // Loop through each parsed record
+    for (const row of records) {
+      const rawBudget = row[columnMapping.budget];
+      const parsedBudget = rawBudget
+        ? parseFloat(rawBudget.replace(/[^0-9.]/g, ''))
+        : null;
+      
+      const insertData = {
+        realtor_id: req.user.id,
+        client_type: (row[columnMapping.clientType] || 'buyer').toLowerCase(),
+        first_name: row[columnMapping.firstName] || 'Unknown',
+        last_name: row[columnMapping.lastName] || 'Unknown',
+        phone: row[columnMapping.phone] || null,
+        email: row[columnMapping.email] || null,
+        budget: parsedBudget,
+        location: row[columnMapping.location] || null,
+        amenities: row[columnMapping.amenities] || null,
+      };
+
+      try {
+        await pool.query(
+          `INSERT INTO clients 
+            (realtor_id, client_type, first_name, last_name, phone, email,
+             budget, location, amenities, pinned, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW())`,
+          [
+            insertData.realtor_id,
+            insertData.client_type,
+            insertData.first_name,
+            insertData.last_name,
+            insertData.phone,
+            insertData.email,
+            insertData.budget,
+            insertData.location,
+            insertData.amenities
+          ]
+        );
+        importedCount++;
+      } catch (err) {
+        console.error('Error inserting row:', row, err);
+      }
+    }
+  
+    return res.json({ message: 'CSV import completed', count: importedCount });
+  } catch (error) {
+    console.error('CSV import overall error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get('/api/clients', ensureAuthenticated, async (req, res) => {
   try {
     const query = `
@@ -521,114 +620,6 @@ app.put(
 app.post('/generate-link', ensureAuthenticated, async (req, res) => {
   const generatedLink = `${FRONTEND_URL}/form/${req.user.id}`;
   return res.json({ link: generatedLink });
-});
-
-app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No CSV file uploaded' });
-  }
-  
-  // Safely parse mapping (it might already be an object)
-  let columnMapping = {};
-  try {
-    columnMapping = (typeof req.body.mapping === "string")
-      ? JSON.parse(req.body.mapping)
-      : req.body.mapping;
-  } catch(e) {
-    console.error('Error parsing mapping:', e);
-    return res.status(400).json({ error: 'Invalid mapping data' });
-  }
-
-  try {
-    // Parse CSV and trim header names
-    const records = await new Promise((resolve, reject) => {
-      const parsedRows = [];
-      // Use a function to trim header names
-      const parser = csvParser({
-        columns: header => header.map(col => col.trim()),
-        skip_empty_lines: true
-      });
-      parser.on('readable', () => {
-        let record;
-        while ((record = parser.read()) !== null) {
-          parsedRows.push(record);
-        }
-      });
-      parser.on('error', err => {
-        console.error('CSV parsing error:', err);
-        reject(err);
-      });
-      parser.on('end', () => {
-        console.log('Parsed CSV records:', parsedRows);
-        resolve(parsedRows);
-      });
-      
-      // Create a readable stream from the CSV buffer
-      const csvStream = stream.Readable.from([req.file.buffer]);
-      csvStream.pipe(parser);
-    });
-  
-    let importedCount = 0;
-    // Loop through each parsed record
-    for (const row of records) {
-      // Convert the budget field to a number (if present)
-      const rawBudget = row[columnMapping.budget];
-      const parsedBudget = rawBudget
-        ? parseFloat(rawBudget.replace(/[^0-9.]/g, ''))
-        : null;
-      
-      const insertData = {
-        realtor_id: req.user.id,
-        client_type: (row[columnMapping.clientType] || 'buyer').toLowerCase(),
-        first_name: row[columnMapping.firstName] || 'Unknown',
-        last_name: row[columnMapping.lastName] || 'Unknown',
-        phone: row[columnMapping.phone] || null,
-        email: row[columnMapping.email] || null,
-        budget: parsedBudget,
-        location: row[columnMapping.location] || null,
-        amenities: row[columnMapping.amenities] || null,
-      };
-
-      try {
-        await pool.query(
-          `INSERT INTO clients 
-            (realtor_id, client_type, first_name, last_name, phone, email,
-             budget, location, amenities, pinned, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, NOW())`,
-          [
-            insertData.realtor_id,
-            insertData.client_type,
-            insertData.first_name,
-            insertData.last_name,
-            insertData.phone,
-            insertData.email,
-            insertData.budget,
-            insertData.location,
-            insertData.amenities
-          ]
-        );
-        importedCount++;
-      } catch (err) {
-        // Log the error along with the row data that caused it
-        console.error('Error inserting row:', row, err);
-      }
-    }
-  
-    return res.json({ message: 'CSV import completed', count: importedCount });
-  } catch (error) {
-    console.error('CSV import overall error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-
-
-app.get('/auth/check', (req, res) => {
-  res.json({
-    authenticated: req.isAuthenticated(),
-    user: req.user,
-    session: req.session
-  });
 });
 
 app.post('/api/realtor/profile-image', ensureAuthenticated, upload.single('image'), async (req, res) => {
