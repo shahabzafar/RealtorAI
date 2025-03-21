@@ -3,20 +3,21 @@ import Navbar from '../Navbar';
 import Hero from './Hero';
 import FeaturedProperties from './FeaturedProperties';
 import Services from './Services';
-import AiChat from './AiChat';
 import InteractiveGraphs from './InteractiveGraphs';
-import ChatBot from './ChatBot';
+import AiChat from './AiChat';
+import '../../styles/Home/HomeApp.css';
 
-const HomeApp = ({ user, onLogout }) => {
+const HomeApp = ({ isAuthenticated }) => {
   return (
-    <div>
-      <Navbar user={user} onLogout={onLogout} />
-      <Hero />
-      <FeaturedProperties />
-      <Services />
-      <InteractiveGraphs />
-      <AiChat />
-      <ChatBot />
+    <div className="home-app">
+      <Navbar isAuthenticated={isAuthenticated} />
+      <main className="home-main">
+        <Hero />
+        <FeaturedProperties />
+        <Services />
+        <InteractiveGraphs />
+        <AiChat />
+      </main>
     </div>
   );
 };
