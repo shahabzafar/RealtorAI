@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
+import '../../styles/Realtor/CSVImport.css';
 
 const CSVImport = () => {
   const [csvFile, setCsvFile] = useState(null);
@@ -87,19 +88,45 @@ const CSVImport = () => {
   };
 
   return (
-    <div style={{ background: '#eee', padding: '1rem', borderRadius: '8px', maxHeight: '80vh', overflowY: 'auto' }}>
-      <h2>CSV Import</h2>
-      <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
+    <div className="csv-import-container">
+      <div className="csv-upload-section">
+        <div className="file-upload-container">
+          <label htmlFor="csv-file-input" className="file-upload-label">
+            <div className="upload-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 7L12 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M7 12L17 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span>Choose File</span>
+          </label>
+          <input 
+            id="csv-file-input" 
+            type="file" 
+            accept=".csv,text/csv" 
+            onChange={handleFileChange} 
+            className="file-input"
+          />
+          {csvFile && <div className="selected-file">Selected: {csvFile.name}</div>}
+        </div>
+      </div>
+
       {headers.length > 0 && (
-        <>
-          <h3>Map CSV Columns</h3>
-          <p>Choose which CSV column matches each client field:</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="csv-mapping-container">
+          <div className="section-heading">
+            <h3>Map CSV Columns</h3>
+            <p>Choose which CSV column matches each client field</p>
+          </div>
+          
+          <div className="mapping-grid">
             {Object.keys(mapping).map((field) => (
-              <div key={field} style={{ minWidth: '200px' }}>
+              <div key={field} className="mapping-field">
                 <label>{field}:</label>
-                <br />
-                <select value={mapping[field]} onChange={(e) => handleMappingChange(field, e.target.value)}>
+                <select 
+                  value={mapping[field]} 
+                  onChange={(e) => handleMappingChange(field, e.target.value)}
+                  className="mapping-select"
+                >
                   <option value="">Ignore</option>
                   {headers.map((hdr) => (
                     <option key={hdr} value={hdr}>
@@ -110,33 +137,37 @@ const CSVImport = () => {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: '1rem' }}>
-            <button onClick={handleUpload}>Import CSV</button>
+          
+          <div className="import-button-container">
+            <button className="import-button" onClick={handleUpload}>
+              Import Clients
+            </button>
           </div>
-          <h4>Sample Data (first 5 rows)</h4>
-          <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {headers.map((hdr) => (
-                  <th key={hdr} style={{ border: '1px solid #ccc', padding: '4px' }}>
-                    {hdr}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sampleData.map((row, idx) => (
-                <tr key={idx}>
-                  {headers.map((hdr) => (
-                    <td key={`${idx}-${hdr}`} style={{ border: '1px solid #ccc', padding: '4px' }}>
-                      {row[hdr]}
-                    </td>
+
+          <div className="sample-data-container">
+            <h4>Sample Data Preview</h4>
+            <div className="table-container">
+              <table className="sample-table">
+                <thead>
+                  <tr>
+                    {headers.map((hdr) => (
+                      <th key={hdr}>{hdr}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleData.map((row, idx) => (
+                    <tr key={idx}>
+                      {headers.map((hdr) => (
+                        <td key={`${idx}-${hdr}`}>{row[hdr]}</td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -8,21 +8,17 @@ import FormLinkGenerator from './FormLinkGenerator';
 import PerformanceOverview from './PerformanceOverview';
 import GeneratedLeads from './GeneratedLeads';
 import RealtorProfileHeader from './RealtorProfileHeader';
-import Footer from '../Home/Footer';
-import Carousel from './Carousel';
-import AiChat from './AiChat';
+import SimpleFooter from './SimpleFooter';
 import CSVImport from './CSVImport';
+import ChatWidget from '../ChatWidget';
 import '../../styles/Realtor/RealtorApp.css';
 
 function RealtorApp({ user, onLogout }) {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
-
   const [generatedLink, setGeneratedLink] = useState('');
-  const navigate = useNavigate();
-
-  // For showing/hiding CSV Import modal
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -67,110 +63,97 @@ function RealtorApp({ user, onLogout }) {
   };
 
   return (
-    <div className="realtor-app-container dark-mode">
+    <div className="realtor-app-container">
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="dashboard-content">
         <RealtorProfileHeader user={user} />
 
-        <div className="client-form-section">
-          <h2>Your Client Form</h2>
-          <p>Share this link or QR code with your clients</p>
-          <FormLinkGenerator
-            user={user}
-            generatedLink={generatedLink}
-            onGenerateLink={handleGenerateLink}
-          />
+        <div className="dashboard-grid">
+          <div className="dashboard-col-left">
+            <div className="client-form-section">
+              <div className="section-content">
+                <h2>Your Client Form</h2>
+                <p>Share this link or QR code with your clients to gather their information</p>
+                <FormLinkGenerator
+                  user={user}
+                  generatedLink={generatedLink}
+                  onGenerateLink={handleGenerateLink}
+                />
+              </div>
+            </div>
+
+            <PerformanceOverview />
+          </div>
+
+          <div className="dashboard-col-right">
+            <div className="clients-section">
+              <div className="section-content">
+                <div className="section-header-flex">
+                  <h2>Clients</h2>
+                  <button
+                    className="import-client-button"
+                    onClick={() => setShowCsvImport(true)}
+                    aria-label="Import clients"
+                  >
+                    +
+                  </button>
+                </div>
+                <p>Manage your client relationships</p>
+
+                <div className="clients-grid">
+                  {clients.length > 0 ? (
+                    clients.map((client) => (
+                      <ClientCard
+                        key={client.id}
+                        client={client}
+                        onSelect={setSelectedClient}
+                        onPinToggle={handlePinToggle}
+                      />
+                    ))
+                  ) : (
+                    <div className="no-clients-placeholder">
+                      <p>No clients yet. Import clients or share your form to get started.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <GeneratedLeads />
+          </div>
         </div>
 
-        <div className="clients-section">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3>Clients</h3>
-            <button
-              className="import-client-button"
-              onClick={() => setShowCsvImport(true)}
-            >
-              <i className="fas fa-plus"></i>
-            </button>
-          </div>
+        {selectedClient && (
+          <ClientDetails
+            client={selectedClient}
+            onClose={() => setSelectedClient(null)}
+          />
+        )}
 
-          <div className="clients-grid">
-            {clients.map((client) => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                onSelect={setSelectedClient}
-                onPinToggle={handlePinToggle}
-              />
-            ))}
-          </div>
-
-          {selectedClient && (
-            <ClientDetails
-              client={selectedClient}
-              onClose={() => setSelectedClient(null)}
-            />
-          )}
-
-          {/* Our overlay for CSV import */}
+        {/* CSV Import Modal */}
+        <div>
           {showCsvImport && (
-            <div
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 9999,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  width: '600px',
-                  maxWidth: '90%',
-                  maxHeight: '90vh',
-                  overflowY: 'auto',
-                  position: 'relative',
-                }}
-              >
-                <button
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1.2rem',
-                  }}
+            <div className="modal-overlay">
+              <div className="modal-container">
+                <button 
+                  className="modal-close-btn"
                   onClick={() => setShowCsvImport(false)}
                 >
                   ✕
                 </button>
+                <h2>Import Clients</h2>
                 <CSVImport />
               </div>
             </div>
           )}
         </div>
-
-        <PerformanceOverview />
-        <GeneratedLeads />
-        <Carousel />
-      </div>
-
-      {/* Move AiChat outside dashboard-content and Footer */}
-      <div className="ai-chat-container">
-        <AiChat />
       </div>
       
-      <Footer />
+      <SimpleFooter />
+      
+      {/* ChatWidget only appears in the Realtor dashboard */}
+      <ChatWidget />
     </div>
   );
 }

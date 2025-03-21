@@ -86,8 +86,11 @@ const RealtorProfileHeader = ({ user }) => {
           </div>
         </div>
         <div className="profile-text">
-          <h2>{user ? `${user.firstName} ${user.lastName}` : 'User Name'}</h2>
-          <div className="badge">Top Realtor</div>
+          <div className="name-container">
+            <h2 className="no-decoration">{user ? `${user.firstName} ${user.lastName}` : 'User Name'}</h2>
+          </div>
+          <span className="badge">Top Realtor</span>
+          <div className="orange-dash"></div>
           <p>Welcome to your Realtor Dashboard</p>
         </div>
       </div>

@@ -1,70 +1,78 @@
 .client-card {
-  background: linear-gradient(135deg, #111111 0%, #333333 100%);
-  border: 1px solid #edf2f7;
-  width: 85%;
-  margin: 15px auto;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s;
-  color: white;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  position: relative;
+}
+
+.client-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .client-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  padding: 1.2rem;
+  background: linear-gradient(135deg, #2c3e50 0%, #4a5b6c 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+  position: relative;
+}
+
+.client-header:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to right, #ff6347, #ff8c7a);
 }
 
 .client-body {
+  padding: 1.2rem;
   cursor: pointer;
 }
 
 .client-body p {
-  margin: 8px 0;
-  color: #e2e8f0;
+  margin: 0 0 0.75rem;
+  color: #5d6778;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
 }
 
-.pin-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 5px 10px;
-  border-radius: 4px;
-  color: white;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pin-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+.client-body p:last-child {
+  margin-bottom: 0;
 }
 
 .floating-import-button {
-  position: fixed !important;
-  bottom: 2rem !important;
-  right: 2rem !important;
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 50% !important;
-  background-color: rgb(63, 81, 181) !important;
-  cursor: pointer !important;
-  z-index: 1000 !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: block !important;
-  box-shadow: none !important;
-  transform: none !important;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1;
 }
 
 .floating-import-button:hover {
-  transform: none !important;
-  box-shadow: none !important;
-  background-color: rgb(63, 81, 181) !important;
+  background-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
 }
 
-.floating-import-button::before,
-.floating-import-button::after {
-  display: none !important;
+.floating-import-button:before {
+  content: '→';
+  color: white;
+  font-size: 14px;
 } 

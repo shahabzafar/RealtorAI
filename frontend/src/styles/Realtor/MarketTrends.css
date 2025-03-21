@@ -1,0 +1,234 @@
+.market-trends {
+  padding: 2rem;
+  margin-bottom: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e8e8e8;
+}
+
+.market-trends h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  position: relative;
+  display: inline-block;
+}
+
+.market-trends h2:after {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 3px;
+  background-color: #ff6347;
+  bottom: -8px;
+  left: 0;
+  box-shadow: 0 1px 3px rgba(255, 99, 71, 0.3);
+}
+
+.market-trends p {
+  font-size: 1rem;
+  color: #6c6c6c;
+  margin-bottom: 1.5rem;
+}
+
+.trends-graph {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.graph-container {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+  margin-top: 1rem;
+}
+
+.graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.graph-header h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.graph-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #5d6778;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.sales-color {
+  background-color: #4e79a7;
+}
+
+.listing-color {
+  background-color: #f28e2c;
+}
+
+.price-color {
+  background-color: #e15759;
+}
+
+.graph-visualization {
+  height: 300px;
+  position: relative;
+}
+
+.graph-placeholder {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: flex-end;
+}
+
+.graph-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 85%;
+  margin-right: 10px;
+  color: #9aa5b1;
+  font-size: 0.75rem;
+  text-align: right;
+  width: 50px;
+}
+
+.graph-bars {
+  display: flex;
+  justify-content: space-between;
+  flex-grow: 1;
+  height: 85%;
+}
+
+.graph-month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.graph-month span {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #5d6778;
+}
+
+.bar-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 4px;
+}
+
+.bar {
+  width: 18px;
+  border-radius: 3px 3px 0 0;
+  transition: all 0.3s ease;
+}
+
+.bar:hover {
+  transform: scaleY(1.05);
+  filter: brightness(110%);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+}
+
+.bar.sales {
+  background: linear-gradient(to top, #4e79a7, #6a8cad);
+}
+
+.bar.listings {
+  background: linear-gradient(to top, #f28e2c, #f5a756);
+}
+
+.bar.price {
+  background: linear-gradient(to top, #e15759, #e7787a);
+}
+
+.trends-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.insight-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  border-left: 4px solid #4e79a7;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+.insight-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.insight-card:nth-child(2) {
+  border-left-color: #f28e2c;
+}
+
+.insight-card:nth-child(3) {
+  border-left-color: #e15759;
+}
+
+.insight-card h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  color: #2c3e50;
+}
+
+.insight-card p {
+  font-size: 0.85rem;
+  color: #5d6778;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .graph-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .trends-insights {
+    grid-template-columns: 1fr;
+  }
+  
+  .bar {
+    width: 10px;
+  }
+} 

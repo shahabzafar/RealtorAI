@@ -1,168 +1,463 @@
 /* Featured Properties - Playful Bubbly Layout */
 .featured-properties {
-    background-color: #f9fbfd; /* Soft, light background to blend well */
-    color: #333;
-    padding: 60px 0;
-    text-align: center;
+    padding: 50px 0;
+    background-color: #f7f9fc; /* Slightly more sophisticated background with blue undertone */
+    width: 114%;
+    margin-left: -7%;
+    box-sizing: border-box;
+    font-family: 'Montserrat', 'Segoe UI', Roboto, -apple-system, sans-serif; /* Consistent font family */
+    position: relative;
 }
 
-.containerProp {
-    width: 98%;
+/* Add subtle texture for sophistication */
+.featured-properties:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(to right, rgba(249, 250, 252, 0.5) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(249, 250, 252, 0.5) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0;
+    position: relative;
+    width: 100%;
+    z-index: 1; /* Ensure content is above the texture */
 }
 
-.containerProp h3 {
-    font-size: 2.3em;
-    color: #ff6347;
-    margin-bottom: 40px;
+.section-header {
+    text-align: center;
+    margin-bottom: 20px;
+    margin-top: 15px;
+    padding: 0 calc(7% + 20px); /* Adjusted from 8% to 7% to match new margin */
 }
 
-.property-grid {
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50; /* More sophisticated dark color */
+    margin-bottom: 10px;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title:after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 3px;
+    background-color: #ff6347;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 1px 3px rgba(255, 99, 71, 0.3); /* Subtle shadow for depth */
+}
+
+.section-description {
+    font-size: 1.1rem;
+    color: #5d6778; /* More sophisticated text color */
+    max-width: 600px;
+    margin: 10px auto 0;
+}
+
+.property-filters {
     display: flex;
     justify-content: center;
-    align-items: stretch;
-    gap: 20px;
     flex-wrap: wrap;
-    padding: 20px;
-}
-
-.property {
-    background: #ffffff;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    width: 585px;
-    height: 530px; /* Increased height */
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-    display: flex;
-    flex-direction: column;
+    gap: 15px;
     margin-bottom: 20px;
+    padding: 0 calc(7% + 20px); /* Adjusted from 8% to 7% to match new margin */
 }
 
-.property:hover {
+.filter-btn {
+    background: transparent;
+    border: 2px solid #e1e5eb; /* Slightly thicker border */
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #5d6778;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    border-color: #ff6347;
+    color: #ff6347;
+    background-color: rgba(255, 99, 71, 0.05); /* Very light background */
+    box-shadow: 0 2px 8px rgba(255, 99, 71, 0.15); /* Subtle shadow on hover */
+}
+
+.filter-btn.active {
+    background-color: #ff6347;
+    border-color: #ff6347;
+    color: white;
+    box-shadow: 0 4px 10px rgba(255, 99, 71, 0.25); /* Slightly enhanced shadow when active */
+}
+
+/* Modified grid layout to show 4 cards without scrolling */
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px; /* Reduced from 30px to 20px */
+    padding: 0;
+}
+
+/* Remove horizontal scroll styles */
+.properties-grid::after,
+.properties-grid::before {
+    display: none;
+}
+
+.property-card {
+    background-color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+    margin: 0;
+    border: 1px solid rgba(0, 0, 0, 0.03); /* Subtle border for sophistication */
+}
+
+.property-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.08); /* Slightly darker border on hover */
 }
 
 .property-image-container {
     position: relative;
-    width: 100%;
-    height: 400px; /* Fixed height for images */
+    height: 240px;
     overflow: hidden;
-    margin: 0;
-    padding: 0;
-    line-height: 0;
 }
 
 .property-image {
-    position: absolute;
     width: 100%;
     height: 100%;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.5s ease;
 }
 
-.property-image.active {
-    opacity: 1;
+.property-card:hover .property-image {
+    transform: scale(1.05);
 }
 
-.property-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.property-details {
-    padding: 20px;
-    text-align: center; /* Center the text */
-    background-color: #ffffff;
-    margin-top: auto;
-}
-
-.property-details p {
-    font-size: 1.2em;
-    margin: 10px 0;
-    line-height: 1.5;
-}
-
-.property-details .price {
-    font-size: 1.4em;
-    color: #ff6347;
-    font-weight: bold;
-}
-
-/* Responsive design */
-@media (max-width: 2000px) {
-    .property {
-        width: 520px;
-        height: 480px; /* Adjust height for smaller screens */
-    }
-    .property-image-container {
-        height: 360px; /* Adjust image height */
-    }
-}
-
-@media (max-width: 1800px) {
-    .property {
-        width: 475px;
-        height: 450px; /* Adjust height for smaller screens */
-    }
-    .property-image-container {
-        height: 330px; /* Adjust image height */
-    }
-}
-
-@media (max-width: 1600px) {
-    .property {
-        width: 430px;
-        height: 420px; /* Adjust height for smaller screens */
-    }
-    .property-image-container {
-        height: 300px; /* Adjust image height */
-    }
-}
-
-@media (max-width: 1400px) {
-    .property {
-        width: 385px;
-        height: 400px; /* Adjust height for smaller screens */
-    }
-    .property-image-container {
-        height: 280px; /* Adjust image height */
-    }
-}
-
-@media (max-width: 768px) {
-    .property {
-        width: 100%;
-        max-width: 585px;
-        height: 520px; /* Ensure proper scaling for smaller screens */
-    }
-    .property-image-container {
-        height: 400px;
-    }
-}
-
-/* Optional: Add indicators */
-.carousel-indicators {
+.property-badge {
     position: absolute;
-    bottom: 10px;
-    width: 100%;
+    top: 15px;
+    left: 15px;
+    background-color: #ff6347;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 4px;
+    z-index: 1;
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1;
+    box-shadow: none;
+}
+
+.favorite-btn svg {
+    color: white;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+    font-size: 1.3rem;
+}
+
+.favorite-btn:hover svg {
+    color: #ff6347;
+}
+
+.favorite-btn.active {
+    background-color: transparent;
+}
+
+.favorite-btn.active svg {
+    color: #ff6347;
+}
+
+.image-nav {
+    position: absolute;
+    bottom: 15px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.nav-btn {
+    background-color: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.nav-btn:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.nav-btn svg {
+    font-size: 0.8rem;
+}
+
+.image-indicators {
+    display: flex;
+    gap: 5px;
 }
 
 .indicator {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
 }
 
 .indicator.active {
-    background: white;
+    background-color: white;
+    width: 20px;
+    border-radius: 4px;
 }
+
+.property-content {
+    padding: 14px;
+}
+
+.property-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ff6347;
+    margin-bottom: 10px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05); /* Subtle text shadow for depth */
+}
+
+.property-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #2c3e50; /* More sophisticated dark color */
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.property-address {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #5d6778; /* More sophisticated text color */
+    margin-bottom: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.property-address .icon {
+    font-size: 0.9rem;
+    margin-right: 5px;
+    color: #999;
+}
+
+.property-features {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.feature-icon {
+    font-size: 1.2rem;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.feature span {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.property-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.property-type {
+    font-size: 0.85rem;
+    color: #666;
+    background-color: #f0f0f0;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.view-details {
+    font-size: 0.9rem;
+    color: #ff6347;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.view-details:hover {
+    color: #ff4500;
+    text-decoration: underline;
+}
+
+.view-all-container {
+    text-align: center;
+    margin-top: -5px; /* Changed from 0 to -5px to move it up */
+    margin-bottom: 20px;
+    padding: 0 calc(7% + 20px); /* Adjusted from 8% to 7% to match new margin */
+}
+
+.btn-view-all {
+    display: inline-block;
+    background-color: transparent;
+    color: #ff6347;
+    border: 2px solid #ff6347;
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-view-all:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.6s ease;
+}
+
+.btn-view-all:hover {
+    background-color: #ff6347;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 99, 71, 0.3);
+}
+
+.btn-view-all:hover:before {
+    left: 100%;
+}
+
+/* Add scroll controls for desktop */
+.scroll-controls {
+    display: none; /* Hide the scroll controls that showed up as white dots */
+}
+
+/* Add more properties to show horizontal scrolling is needed */
+.property-card:last-child {
+    margin-right: 0;
+}
+
+.property-card:first-child {
+    margin-left: 0;
+}
+
+@media (max-width: 1400px) {
+    .properties-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px; /* Decreased from 6px to 5px for even tighter spacing */
+    }
+    
+    .property-content {
+        padding: 10px; /* Reduced from 12px to 10px */
+    }
+}
+
+@media (max-width: 1200px) {
+    .properties-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+}
+
+@media (max-width: 992px) {
+    .properties-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .featured-properties {
+        padding: 40px 0;
+    }
+    
+    .section-title {
+        font-size: 2rem;
+    }
+    
+    .properties-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .property-card {
+        width: 260px;
+    }
+    
+    .property-features {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .feature {
+        flex: 1 0 30%;
+    }
+}
+
+
+
+

@@ -1,0 +1,127 @@
+.simple-footer {
+  background: linear-gradient(135deg, #2c3e50 0%, #4a5b6c 100%);
+  color: #ffffff;
+  padding: 3rem 0;
+  font-family: 'Montserrat', sans-serif;
+  width: 100%;
+}
+
+.footer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+.footer-column h3 {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.footer-column h3:after {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 3px;
+  background-color: #ff6347;
+  bottom: -8px;
+  left: 0;
+  box-shadow: 0 1px 3px rgba(255, 99, 71, 0.3);
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-column ul li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-column ul li a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+}
+
+.footer-column ul li a:hover {
+  color: #ff6347;
+}
+
+.footer-column p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.subscribe-form {
+  display: flex;
+}
+
+.subscribe-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 4px 0 0 4px;
+  font-family: inherit;
+}
+
+.subscribe-form input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.subscribe-form button {
+  padding: 0.75rem 1.5rem;
+  background-color: #ff6347;
+  color: #ffffff;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-family: inherit;
+}
+
+.subscribe-form button:hover {
+  background-color: #ff4500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .footer-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .footer-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .subscribe-form {
+    flex-direction: column;
+  }
+  
+  .subscribe-form input {
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+  
+  .subscribe-form button {
+    border-radius: 4px;
+    width: 100%;
+  }
+} 

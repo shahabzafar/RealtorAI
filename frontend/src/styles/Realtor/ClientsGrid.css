@@ -1,0 +1,299 @@
+.clients-grid {
+  padding: 2rem;
+  margin-bottom: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.clients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.clients-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.clients-header p {
+  font-size: 1rem;
+  color: #6c6c6c;
+  margin-bottom: 0;
+}
+
+.add-client-button button {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 1.2rem;
+  background-color: #ff6347;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(255, 99, 71, 0.2);
+}
+
+.add-client-button button:hover {
+  background-color: #e5573e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(255, 99, 71, 0.25);
+}
+
+.plus-icon {
+  font-style: normal;
+  font-weight: 700;
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.clients-scroll-container {
+  width: 100%;
+  position: relative;
+  padding: 0.5rem 0;
+}
+
+.clients-scroll {
+  display: flex;
+  overflow-x: auto;
+  padding: 0.5rem 0.25rem;
+  margin: 0 -0.25rem;
+  gap: 1.5rem;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  -ms-overflow-style: none;
+}
+
+.clients-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.clients-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.clients-scroll::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 10px;
+}
+
+.clients-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+.client-card {
+  flex: 0 0 220px;
+  aspect-ratio: 1/1;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.client-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.buyer-client {
+  border-top: 4px solid #4e79a7;
+}
+
+.seller-client {
+  border-top: 4px solid #f28e2c;
+}
+
+.client-type-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  border-radius: 30px;
+  font-weight: 600;
+  color: white;
+}
+
+.buyer-client .client-type-badge {
+  background-color: #4e79a7;
+}
+
+.seller-client .client-type-badge {
+  background-color: #f28e2c;
+}
+
+.client-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.client-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  margin-top: 0.5rem;
+}
+
+.client-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 30px;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.active-status {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.inactive-status {
+  background-color: #f5f5f5;
+  color: #9e9e9e;
+}
+
+.client-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.5rem;
+}
+
+.client-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.client-actions button {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-client {
+  background-color: white;
+  color: #2c3e50;
+  border: 1px solid #d1d5db;
+}
+
+.view-client:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.contact-client {
+  background-color: white;
+  color: #ff6347;
+  border: 1px solid #ff6347;
+}
+
+.contact-client:hover {
+  background-color: #ff6347;
+  color: white;
+}
+
+.no-clients-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  border: 2px dashed #d1d1d1;
+}
+
+.no-clients-placeholder p {
+  font-size: 1rem;
+  color: #8a8a8a;
+  font-style: italic;
+  text-align: center;
+  max-width: 80%;
+}
+
+@media (max-width: 768px) {
+  .clients-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .add-client-button {
+    width: 100%;
+  }
+  
+  .add-client-button button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .client-card {
+    flex: 0 0 180px;
+  }
+}
+
+/* Upload button styling */
+.import-upload-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #ff6347;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 10px rgba(255, 99, 71, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.import-upload-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 15px rgba(255, 99, 71, 0.4);
+}
+
+.import-upload-button:after {
+  content: '↑';
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.import-upload-button:before {
+  content: 'Import';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.import-upload-button:hover:before {
+  opacity: 1;
+} 

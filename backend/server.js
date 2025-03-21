@@ -621,8 +621,6 @@ app.post('/api/clients/import-csv', ensureAuthenticated, upload.single('file'), 
   }
 });
 
-
-
 app.get('/auth/check', (req, res) => {
   res.json({
     authenticated: req.isAuthenticated(),
@@ -673,6 +671,213 @@ app.get('/api/realtor/:id/profile-image', async (req, res) => {
   } catch (error) {
     console.error('Error serving profile image:', error);
     res.status(500).send('Error retrieving image');
+  }
+});
+
+// Chatbot analytics endpoint
+app.post('/api/chatbot/analytics', async (req, res) => {
+  try {
+    const { eventType, sessionId, data } = req.body;
+    
+    if (!eventType || !sessionId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Insert into database
+    const result = await pool.query(
+      `INSERT INTO chatbot_analytics 
+      (event_type, session_id, event_data, created_at) 
+      VALUES ($1, $2, $3, NOW()) 
+      RETURNING id`,
+      [eventType, sessionId, JSON.stringify(data || {})]
+    );
+    
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Analytics event recorded',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Error recording chatbot analytics:', error);
+    return res.status(500).json({ error: 'Failed to record analytics data' });
+  }
+});
+
+// Create the chatbot_analytics table if it doesn't exist
+(async function createChatbotAnalyticsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chatbot_analytics (
+        id SERIAL PRIMARY KEY,
+        event_type VARCHAR(50) NOT NULL,
+        session_id VARCHAR(100) NOT NULL,
+        event_data JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_session_id ON chatbot_analytics(session_id);
+      CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_event_type ON chatbot_analytics(event_type);
+      CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_created_at ON chatbot_analytics(created_at);
+    `);
+    console.log('Chatbot analytics table created or verified');
+  } catch (error) {
+    console.error('Error creating chatbot analytics table:', error);
+  }
+})();
+
+// Create appointments table if it doesn't exist
+(async function createAppointmentsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id SERIAL PRIMARY KEY,
+        date DATE NOT NULL,
+        time VARCHAR(20) NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        message TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+      CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
+    `);
+    console.log('Appointments table created or verified');
+  } catch (error) {
+    console.error('Error creating appointments table:', error);
+  }
+})();
+
+// Handle appointment scheduling
+app.post('/api/appointments', [
+  body('date').notEmpty(),
+  body('time').notEmpty(),
+  body('name').notEmpty(),
+  body('email').isEmail(),
+  body('phone').notEmpty()
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    
+    const { date, time, name, email, phone, message } = req.body;
+    
+    // Insert the appointment into the database
+    const result = await pool.query(
+      `INSERT INTO appointments 
+      (date, time, name, email, phone, message, status, created_at) 
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW()) 
+      RETURNING id`,
+      [date, time, name, email, phone, message || '']
+    );
+    
+    // Send confirmation email (mock for now)
+    console.log(`Would send confirmation email to ${email} for appointment on ${date} at ${time}`);
+    
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Appointment scheduled successfully',
+      appointmentId: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Error scheduling appointment:', error);
+    return res.status(500).json({ error: 'Failed to schedule appointment' });
+  }
+});
+
+// Get available appointment slots (mock data for now)
+app.get('/api/appointments/available', (req, res) => {
+  const { startDate, endDate } = req.query;
+  
+  // Generate mock available slots
+  const slots = [];
+  const start = startDate ? new Date(startDate) : new Date();
+  const end = endDate ? new Date(endDate) : new Date(start);
+  end.setDate(end.getDate() + 14); // Default to 2 weeks from start
+  
+  // Start from tomorrow
+  start.setDate(start.getDate() + 1);
+  
+  // Generate time slots for each day between start and end
+  for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+    // Skip weekends
+    if (day.getDay() === 0 || day.getDay() === 6) continue;
+    
+    const date = day.toISOString().split('T')[0];
+    
+    // Add time slots
+    ['09:00 AM', '11:00 AM', '01:00 PM', '03:00 PM', '05:00 PM'].forEach(time => {
+      // 70% chance of availability
+      if (Math.random() > 0.3) {
+        slots.push({
+          date,
+          time,
+          available: true
+        });
+      }
+    });
+  }
+  
+  return res.json({ slots });
+});
+
+// Create chatbot_feedback table if it doesn't exist
+(async function createChatbotFeedbackTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chatbot_feedback (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(100) NOT NULL,
+        rating INTEGER NOT NULL,
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_chatbot_feedback_session_id ON chatbot_feedback(session_id);
+      CREATE INDEX IF NOT EXISTS idx_chatbot_feedback_rating ON chatbot_feedback(rating);
+    `);
+    console.log('Chatbot feedback table created or verified');
+  } catch (error) {
+    console.error('Error creating chatbot feedback table:', error);
+  }
+})();
+
+// Handle chatbot feedback
+app.post('/api/chatbot/feedback', [
+  body('sessionId').notEmpty(),
+  body('rating').isInt({ min: 1, max: 5 })
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    
+    const { sessionId, rating, comment } = req.body;
+    
+    // Insert the feedback into the database
+    const result = await pool.query(
+      `INSERT INTO chatbot_feedback 
+      (session_id, rating, comment, created_at) 
+      VALUES ($1, $2, $3, NOW()) 
+      RETURNING id`,
+      [sessionId, rating, comment || null]
+    );
+    
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Feedback submitted successfully',
+      id: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    return res.status(500).json({ error: 'Failed to submit feedback' });
   }
 });
 

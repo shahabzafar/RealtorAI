@@ -4,8 +4,8 @@ import Hero from './Hero';
 import FeaturedProperties from './FeaturedProperties';
 import Services from './Services';
 import AiChat from './AiChat';
-import RealEstateTrends from './RealEstateTrends';
 import InteractiveGraphs from './InteractiveGraphs';
+import ChatBot from './ChatBot';
 
 const HomeApp = ({ user, onLogout }) => {
   return (
@@ -16,7 +16,7 @@ const HomeApp = ({ user, onLogout }) => {
       <Services />
       <InteractiveGraphs />
       <AiChat />
-      <RealEstateTrends />
+      <ChatBot />
     </div>
   );
 };

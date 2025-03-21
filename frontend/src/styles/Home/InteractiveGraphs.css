@@ -1,0 +1,82 @@
+.graphs-section {
+  padding: 40px 0;
+  background-color: #f9f9f9;
+  margin-top: -10px; /* Connect with previous section */
+}
+
+.graphs-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.graph-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  margin-bottom: 30px;
+  overflow: hidden; /* Keep this to constrain the graph-content */
+}
+
+.graph-title {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.graph-subtitle {
+  text-align: center;
+  font-size: 1rem;
+  color: #666;
+  margin-top: -10px;
+  margin-bottom: 25px;
+}
+
+.graph-content {
+  height: 350px; /* Control the height of the graph */
+  position: relative;
+  min-width: 800px; /* Ensure minimum width to show all data points */
+  overflow-x: auto; /* Allow horizontal scrolling */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Style the scrollbar for the graph content */
+.graph-content::-webkit-scrollbar {
+  height: 6px;
+}
+
+.graph-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.graph-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 99, 71, 0.5);
+  border-radius: 10px;
+}
+
+.graph-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 99, 71, 0.7);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .graph-content {
+    height: 300px;
+    min-width: 600px;
+  }
+  
+  .graph-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .graph-content {
+    height: 250px;
+    min-width: 500px;
+  }
+} 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/Home/Footer.css';
+import '../../styles/Realtor/SimpleFooter.css';
 
-const Footer = () => {
+const SimpleFooter = () => {
   return (
-    <footer className="footer">
-      <div className="container footer-grid">
+    <footer className="simple-footer">
+      <div className="footer-container">
         <div className="footer-column">
           <h3>Company</h3>
           <ul>
@@ -44,4 +44,4 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+export default SimpleFooter; 

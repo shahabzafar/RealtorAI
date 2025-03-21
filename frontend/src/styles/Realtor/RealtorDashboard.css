@@ -1,0 +1,52 @@
+.realtor-dashboard {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Montserrat', 'Segoe UI', Roboto, -apple-system, sans-serif;
+}
+
+.dashboard-grid {
+  display: flex;
+  gap: 2rem;
+}
+
+.dashboard-col-left {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dashboard-col-right {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .dashboard-grid {
+    flex-direction: column;
+  }
+  
+  .dashboard-col-left,
+  .dashboard-col-right {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .realtor-dashboard {
+    padding: 1rem;
+  }
+  
+  .dashboard-grid {
+    gap: 1rem;
+  }
+} 
