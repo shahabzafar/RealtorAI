@@ -7,10 +7,10 @@ import InteractiveGraphs from './InteractiveGraphs';
 import AiChat from './AiChat';
 import '../../styles/Home/HomeApp.css';
 
-const HomeApp = ({ isAuthenticated }) => {
+const HomeApp = ({ user, onLogout }) => {
   return (
     <div className="home-app">
-      <Navbar isAuthenticated={isAuthenticated} />
+      <Navbar user={user} onLogout={onLogout} />
       <main className="home-main">
         <Hero />
         <FeaturedProperties />

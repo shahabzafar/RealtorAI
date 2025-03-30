@@ -19,7 +19,7 @@ const SignIn = ({ setUser }) => {
         email: response.data.user.email,
         firstName: response.data.user.firstName,
         lastName: response.data.user.lastName,
-        displayName: response.data.user.displayName
+        displayName: response.data.user.displayName || `${response.data.user.firstName} ${response.data.user.lastName}`
       });
       navigate('/realtor');
     } catch (error) {
