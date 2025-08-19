@@ -1,8 +1,5 @@
 # RealtorAI: AI-Assisted Real Estate Platform
 
-![RealtorAI Dashboard Preview](https://realtoriq.onrender.com/path-to-image.jpg) 
-
-
 ## Overview
 RealtorAI is a comprehensive web-based platform designed to revolutionize real estate workflows by leveraging AI technologies. This system streamlines client acquisition, lead management, market analysis, and transaction processes for real estate professionals.
 
